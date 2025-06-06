@@ -1,0 +1,4 @@
+pandas==2.2.3
+boto3==1.37.3
+psycopg2==2.9.10
+pyyaml==6.0.2
