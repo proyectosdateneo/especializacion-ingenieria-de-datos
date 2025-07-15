@@ -2,8 +2,8 @@ import yaml
 import os
 
 # Ruta al archivo de configuración específico del ETL
-# Asume que este script está en nivelacion/solucion/
-# y etl_config.yaml está en el mismo directorio.
+# Asume que este script
+# y etl_config.yaml están en el mismo directorio.
 CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), 'etl_config.yaml')
 
 def load_db_config():
@@ -26,7 +26,7 @@ def load_db_config():
         }
     except FileNotFoundError:
         print(f"Error: El archivo de configuración {CONFIG_FILE_PATH} no fue encontrado.")
-        print("Por favor, crea etl_config.yaml en la carpeta nivelacion/solucion/ con la configuración necesaria.")
+        print("Por favor, crea etl_config.yaml en la carpeta nivelacion/ con la configuración necesaria.")
         raise
     except (KeyError, TypeError) as e:
         print(f"Error: Falta una clave o hay un tipo incorrecto en la sección 'database' de {CONFIG_FILE_PATH}. Detalles: {e}")
@@ -60,7 +60,7 @@ def get_s3_config():
         }
     except FileNotFoundError:
         print(f"Error: El archivo de configuración {CONFIG_FILE_PATH} no fue encontrado.")
-        print("Por favor, crea etl_config.yaml en la carpeta nivelacion/solucion/ con la configuración necesaria.")
+        print("Por favor, crea etl_config.yaml en la carpeta nivelacion/ con la configuración necesaria.")
         raise
     except (KeyError, TypeError) as e:
         print(f"Error: Falta una clave o hay un tipo incorrecto en la sección 's3_destination' de {CONFIG_FILE_PATH}. Detalles: {e}")
@@ -72,7 +72,7 @@ def get_s3_config():
 # Para prueba directa del módulo
 if __name__ == '__main__':
     print(f"Intentando cargar configuraciones desde: {CONFIG_FILE_PATH}")
-    print("Asegúrate de que 'etl_config.yaml' exista en 'nivelacion/solucion/' y esté bien configurado.")
+    print("Asegúrate de que 'etl_config.yaml' exista en 'nivelacion/' y esté bien configurado.")
     print("Ejemplo de etl_config.yaml:")
     print("""
 # Configuración para el ETL de Nivelación
