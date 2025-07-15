@@ -194,3 +194,7 @@ cython_debug/
 .cursorindexingignore
 nivelacion/etl_base.py
 nivelacion/etl_config.yaml
+ingesta/.dlt/config.toml
+ingesta/.dlt/secrets.toml
+ingesta/schemas/export/sql_database.schema.yaml
+ingesta/schemas/import/sql_database.schema.yaml
