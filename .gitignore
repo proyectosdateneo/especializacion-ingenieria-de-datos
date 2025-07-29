@@ -198,3 +198,4 @@ ingesta/.dlt/config.toml
 ingesta/.dlt/secrets.toml
 ingesta/schemas/export/sql_database.schema.yaml
 ingesta/schemas/import/sql_database.schema.yaml
+*.duckdb

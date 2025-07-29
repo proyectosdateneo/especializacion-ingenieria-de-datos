@@ -12,7 +12,10 @@ DEFAULT_TABLES = {
     "accounts_subscription": False,
     "subscriptions": False,
     "contents": True,
-    "content_attributes": True
+    "content_attributes": True,
+    "premium_features": False,
+    "account_premium_features": False,
+    "subscription_payments": False
 }
 
 def carga_datos(
