@@ -1,0 +1,158 @@
+version: 2
+
+sources:
+  - name: raw_datavision
+    description: |
+      Fuente de datos que contiene la información de cuentas, suscripciones y contenidos
+      del sistema transaccional. Incluye las tablas de cuentas, suscripciones, relación
+      cuenta-suscripción, contenidos y atributos de contenidos. También se cuenta con las tablas donde se
+      reflejan los pagos que realizan las cuentas.
+    schema: |
+      {%- if target.name == "dev" -%} raw_datavision_dev
+      {%- elif target.name == "prod" -%} raw_datavision_prod
+      {%- else -%} invalid_schema
+      {%- endif -%}
+    tables:
+      - name: accounts
+        description: |
+          Tabla que almacena la información de las cuentas de usuario, incluyendo sus datos
+          básicos y de contacto. Cada cuenta puede tener más de suscripción asociada pero solo una vigente.
+        columns:
+          - name: account_id
+            description: Identificador único de la cuenta
+          - name: account_name
+            description: Nombre de la cuenta
+          - name: email
+            description: Correo electrónico asociado a la cuenta
+          - name: created_at
+            description: Marca de tiempo cuando se creó la cuenta
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la cuenta
+
+      - name: subscriptions
+        description: |
+          Tabla que almacena los diferentes tipos de suscripción disponibles en el sistema,
+          incluyendo sus límites y características.
+        columns:
+          - name: subscription_id
+            description: Identificador único del tipo de suscripción
+          - name: subscription_name
+            description: Nombre del plan, por ejemplo Gratuita, Premium o Empresarial
+          - name: max_contents_per_month
+            description: Límite de contenidos que se pueden crear por mes
+          - name: created_at
+            description: Marca de tiempo cuando se creó el tipo de suscripción
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el tipo de suscripción
+
+      - name: accounts_subscription
+        description: |
+          Tabla que mantiene la relación entre cuentas y suscripciones, permitiendo
+          que una cuenta tenga una suscripción activa en un momento dado.
+          Esta tabla es histórica, cuenta con una columna de fecha de inicio y fin de suscripción.
+          Si el último registro para una cuenta tiene fin no nulo, significa que la cuenta abandonó la plataforma.
+        columns:
+          - name: account_id
+            description: Identificador de la cuenta
+          - name: subscription_id
+            description: Identificador del tipo de suscripción
+          - name: created_at
+            description: Marca de tiempo cuando se creó la relación
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la relación
+
+      - name: contents
+        description: |
+          Tabla que almacena la información de los contenidos creados por las cuentas,
+          incluyendo su tipo, título y descripción.
+        columns:
+          - name: content_id
+            description: Identificador único del contenido
+          - name: account_id
+            description: Identificador de la cuenta que creó el contenido
+          - name: title
+            description: Título del contenido
+          - name: description
+            description: Descripción detallada del contenido
+          - name: content_type
+            description: Tipo de contenido, por ejemplo video, artículo o podcast
+          - name: created_at
+            description: Marca de tiempo cuando se creó el contenido
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el contenido. Campo utilizado en la ingesta para hacer carga incremental.
+
+      - name: content_attributes
+        description: |
+          Tabla que almacena atributos adicionales de los contenidos, como categoría
+          y duración, en un formato clave-valor (Entity-Attribute-Value) flexible.
+          Cada fila de esta tabla representa un atributo de un contenido, con el
+          nombre del atributo y su valor asociado. Las columnas de la tabla son:
+          - attribute_name: El nombre del atributo, por ejemplo "Categoría" o "Duración".
+          - string_value, decimal_value, boolean_value, etc: El valor del atributo,
+            dependiendo del tipo de valor que se almacene. Por ejemplo, si el atributo
+            es "Categoría", el valor se almacena en la columna string_value.
+        columns:
+          - name: content_id
+            description: Identificador del contenido al que pertenece el atributo
+          - name: attribute_name
+            description: Nombre del atributo, por ejemplo Categoría o Duración
+          - name: string_value
+            description: Valor del atributo si es de tipo texto
+          - name: decimal_value
+            description: Valor del atributo si es de tipo numérico
+          - name: created_at
+            description: Marca de tiempo cuando se creó el atributo
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el atributo
+
+      - name: subscription_payments
+        description: |
+          Tabla que almacena los pagos realizados por las suscripciones de las cuentas,
+          incluyendo el monto, método de pago y ciclo de facturación.
+        columns:
+          - name: payment_id
+            description: Identificador único del pago
+          - name: account_subscription_id
+            description: Identificador de la suscripción de la cuenta
+          - name: payment_date
+            description: Fecha en que se realizó el pago
+          - name: amount
+            description: Monto del pago
+          - name: payment_method
+            description: Método de pago utilizado
+          - name: billing_cycle
+            description: Ciclo de facturación del pago
+
+      - name: premium_features
+        description: |
+          Tabla que almacena las características premium disponibles en el sistema,
+          incluyendo su descripción y precio base.
+        columns:
+          - name: feature_id
+            description: Identificador único de la característica premium
+          - name: feature_name
+            description: Nombre de la característica premium
+          - name: description
+            description: Descripción detallada de la característica
+          - name: base_price
+            description: Precio base de la característica premium
+          - name: created_at
+            description: Marca de tiempo cuando se creó la característica
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la característica
+
+      - name: account_premium_features
+        description: |
+          Tabla que almacena las características premium compradas por las cuentas,
+          incluyendo la fecha de compra y el monto pagado.
+        columns:
+          - name: account_feature_id
+            description: Identificador único de la compra de característica premium
+          - name: account_id
+            description: Identificador de la cuenta que compró la característica
+          - name: feature_id
+            description: Identificador de la característica premium comprada
+          - name: purchase_date
+            description: Fecha en que se realizó la compra
+          - name: amount_paid
+            description: Monto pagado por la característica premium
