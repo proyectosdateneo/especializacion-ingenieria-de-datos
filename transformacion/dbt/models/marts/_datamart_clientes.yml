@@ -1,0 +1,365 @@
+version: 2
+
+models:
+  - name: dim_cuentas_base
+    description: |
+      Dimensión base de cuentas (SCD Tipo 2) construida a partir del snapshot `accounts_snapshot`.
+      Define ventanas de validez por historial de cambios y sirve como fundamento para
+      enriquecimientos posteriores (por ejemplo, la tabla `dim_cuentas`) y para la vinculación
+      temporal correcta con hechos como `fact_rfm` y `fact_suscripciones_cuentas`.
+
+      Detalles clave de la lógica:
+      - La clave sustituta `id_dim_cuenta` proviene de `dbt_scd_id` del snapshot.
+      - `valido_desde` usa `fecha_creacion` en el primer registro histórico de la cuenta; para
+        los siguientes, usa `dbt_valid_from`.
+      - `valido_hasta` usa la fecha de fin menos 1 día cuando existe `dbt_valid_to`; si está
+        ausente, se fija en `9999-12-31` para denotar el registro vigente.
+      - `es_actual` indica si el registro es la versión vigente (cuando `dbt_valid_to` es nulo).
+    columns:
+      - name: id_dim_cuenta
+        description: Clave sustituta SCD2 (derivada de `dbt_scd_id`) que identifica un registro histórico único de la cuenta
+        data_tests: [not_null, unique]
+      - name: id_cuenta
+        description: Clave natural de negocio de la cuenta proveniente del sistema fuente
+        data_tests: [not_null]
+      - name: nombre_cuenta
+        description: Nombre de la cuenta
+      - name: correo_electronico
+        description: Correo electrónico asociado a la cuenta
+      - name: fecha_creacion
+        description: Fecha de creación de la cuenta en el sistema fuente
+      - name: fecha_actualizacion
+        description: Última fecha de actualización de la cuenta en el sistema fuente
+      - name: valido_desde
+        description: Inicio de validez del registro SCD2 (primero = `fecha_creacion`, posteriores = `dbt_valid_from`)
+        data_tests: [not_null]
+      - name: valido_hasta
+        description: Fin de validez del registro SCD2 (si no hay `dbt_valid_to`, se fija en `9999-12-31`)
+        data_tests: [not_null]
+      - name: es_actual
+        description: Indicador booleano de si el registro es la versión vigente
+
+  - name: dim_cuentas
+    description: |
+      Dimensión de cuentas enriquecida con el último y el anterior segmento RFM provenientes de `fact_rfm`.
+      Conserva el comportamiento SCD2 de `dim_cuentas_base` y agrega el contexto analítico de segmentación.
+
+      Detalles clave de la lógica:
+      - Parte de `dim_cuentas_base` y le asocia, para cada `id_dim_cuenta`, los 2 últimos
+        resultados de segmentación en `fact_rfm` por fecha (`id_dim_fecha_rfm`).
+      - Si una cuenta aún no tiene segmentación en `fact_rfm`, se usa el placeholder
+        "Sin segmentación" y la fecha `1900-01-01`.
+
+      Algoritmo funcional (carga de segmento_rfm en `dim_cuentas`):
+      1. Para cada `id_dim_cuenta` presente en `dim_cuentas_base`, recuperar todos los registros de `fact_rfm` del mismo `id_dim_cuenta`.
+      2. Ordenar esos registros por `id_dim_fecha_rfm` de forma descendente.
+      3. Tomar la primera fila (rn = 1) como:
+         - `segmento_rfm_ultimo` = `segmento_rfm` de esa fila
+         - `fecha_rfm_ultimo` = `id_dim_fecha_rfm` de esa fila
+      4. Tomar la segunda fila (rn = 2), si existe, como:
+         - `segmento_rfm_anterior` = `segmento_rfm` de esa fila
+         - `fecha_rfm_anterior` = `id_dim_fecha_rfm` de esa fila
+      5. Si no existen filas en `fact_rfm` para esa cuenta:
+         - `segmento_rfm_ultimo` = "Sin segmentación"
+         - `fecha_rfm_ultimo` = `1900-01-01`
+         - `segmento_rfm_anterior` = "Sin segmentación"
+         - `fecha_rfm_anterior` = `1900-01-01`
+      6. Si existe solo una fila en `fact_rfm` para esa cuenta:
+         - Completar el anterior con los placeholders anteriores.
+      7. Granularidad y emparejamiento: el join se realiza por `id_dim_cuenta` (no por `id_cuenta`), conservando el grano SCD2 de la cuenta.
+      8. Consideración de unicidad: se asume a lo sumo un registro por combinación (`id_dim_cuenta`, `id_dim_fecha_rfm`) en `fact_rfm`. En caso de empates por fecha, la selección del "último" se hace por ordenación estrictamente por fecha (comportamiento determinista si la combinación es única).
+    columns:
+      - name: id_dim_cuenta
+        description: Clave sustituta SCD2 de la cuenta
+        data_tests: [not_null, unique]
+      - name: id_cuenta
+        description: Clave natural de la cuenta
+        data_tests: [not_null]
+      - name: nombre_cuenta
+        description: Nombre de la cuenta
+      - name: correo_electronico
+        description: Correo electrónico de la cuenta
+      - name: fecha_creacion
+        description: Fecha de creación de la cuenta en el sistema fuente
+      - name: fecha_actualizacion
+        description: Última fecha de actualización de la cuenta en el sistema fuente
+      - name: valido_desde
+        description: Inicio de validez del registro SCD2
+        data_tests: [not_null]
+      - name: valido_hasta
+        description: Fin de validez del registro SCD2
+        data_tests: [not_null]
+      - name: es_actual
+        description: Indicador de si el registro es vigente
+      - name: segmento_rfm_ultimo
+        description: Último segmento RFM disponible para la cuenta (o "Sin segmentación" si no aplica)
+      - name: fecha_rfm_ultimo
+        description: Fecha de cálculo del último RFM asociado
+      - name: segmento_rfm_anterior
+        description: Segmento RFM anterior al último disponible para la cuenta
+      - name: fecha_rfm_anterior
+        description: Fecha de cálculo del RFM anterior asociado
+
+  - name: dim_suscripciones
+    description: |
+      Dimensión de suscripciones (SCD Tipo 2) construida a partir del snapshot `subscriptions_snapshot`.
+      Mantiene la historia de cambios en atributos como nombre y límites del plan.
+
+      Detalles clave de la lógica:
+      - `id_dim_suscripcion` deriva de `dbt_scd_id` del snapshot.
+      - `valido_desde` usa `fecha_creacion` en el primer registro y `dbt_valid_from` en los siguientes.
+      - `valido_hasta` utiliza `dbt_valid_to - 1 día` cuando existe; en caso contrario, `9999-12-31`.
+      - `es_actual` indica si el registro es la versión vigente.
+    columns:
+      - name: id_dim_suscripcion
+        description: Clave sustituta SCD2 (derivada de `dbt_scd_id`) para la suscripción
+        data_tests: [not_null, unique]
+      - name: id_suscripcion
+        description: Clave natural de la suscripción
+        data_tests: [not_null]
+      - name: nombre_suscripcion
+        description: Nombre del plan de suscripción
+      - name: max_contenidos_mensuales
+        description: Límite de contenidos permitidos por mes del plan
+      - name: fecha_creacion
+        description: Fecha de creación del plan en el sistema fuente
+      - name: fecha_actualizacion
+        description: Última fecha de actualización del plan en el sistema fuente
+      - name: valido_desde
+        description: Inicio de validez del registro SCD2 (primero = `fecha_creacion`, posteriores = `dbt_valid_from`)
+        data_tests: [not_null]
+      - name: valido_hasta
+        description: Fin de validez del registro SCD2 (si no hay `dbt_valid_to`, se fija en `9999-12-31`)
+        data_tests: [not_null]
+      - name: es_actual
+        description: Indicador booleano de si el registro es la versión vigente
+
+  - name: dim_contenidos
+    description: |
+      Dimensión de contenidos con seguimiento histórico de cambios (SCD Tipo 2) para atributos
+      como `tipo_contenido`, `categoria` y `duracion`. Incluye además atributos SCD Tipo 1 como
+      `titulo` y `descripcion`. Permite vinculación temporal consistente con hechos.
+    columns:
+      - name: id_dim_contenido
+        description: Clave subrogada SCD2 generada como un hash para identificar cada registro histórico del contenido
+        data_tests: [not_null, unique]
+      - name: id_contenido
+        description: Clave natural del contenido
+        data_tests: [not_null]
+      - name: id_cuenta
+        description: Clave natural de la cuenta dueña del contenido en el sistema fuente
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: id_cuenta
+      - name: titulo
+        description: Título del contenido (SCD Tipo 1)
+      - name: descripcion
+        description: Descripción del contenido (SCD Tipo 1)
+      - name: tipo_contenido
+        description: Tipo del contenido (por ejemplo, video, artículo). Se rastrea históricamente (SCD Tipo 2)
+      - name: categoria
+        description: Categoría del contenido, con historial (SCD Tipo 2)
+      - name: duracion
+        description: Duración del contenido en minutos, con historial (SCD Tipo 2)
+      - name: fecha_creacion
+        description: Fecha de creación del contenido en el sistema fuente
+      - name: fecha_actualizacion
+        description: Última fecha de actualización del contenido en el sistema fuente
+      - name: valido_desde
+        description: Inicio de validez del registro SCD2
+        data_tests: [not_null]
+      - name: valido_hasta
+        description: Fin de validez del registro SCD2
+        data_tests: [not_null]
+      - name: es_actual
+        description: Indicador de si el registro es la versión vigente en la dimensión
+
+  - name: fact_suscripciones_cuentas
+    description: |
+      Hecho que modela los períodos de suscripción por cuenta y los eventos de cambio entre planes.
+      Se deriva de `stg_accounts_subscription` y determina para cada período:
+      - El tipo de cambio respecto al plan anterior: "Upgrade", "Downgrade", "Misma Suscripción" o "Nueva Suscripción".
+      - La duración del período en días.
+      - Potenciales eventos de churn cuando existe `fecha_fin` y no hay suscripción siguiente.
+
+      Supuestos de negocio relevantes:
+      - La jerarquía de planes se infiere del orden numérico de `id_suscripcion`. Si `id_suscripcion` > `id_suscripcion_anterior` se asume "Upgrade"; si es menor, "Downgrade".
+      - La vinculación dimensional se realiza al inicio del período (`fecha_inicio`), respetando ventanas de validez SCD2 de `dim_cuentas_base` y `dim_suscripciones`.
+
+      Algoritmo funcional (derivación y etiquetado):
+      1. Por cada `id_cuenta`, ordenar sus períodos por `fecha_inicio`.
+      2. Calcular para cada período:
+         - `id_suscripcion_anterior` = plan del período previo (lag)
+         - `fecha_inicio_anterior` = inicio del período previo (lag)
+         - `fecha_primer_suscripcion` = primera `fecha_inicio` de la cuenta (first_value)
+         - `id_suscripcion_siguiente` = plan del período siguiente (lead)
+      3. Derivar métricas:
+         - `duracion_dias` = días entre `fecha_inicio` y `coalesce(fecha_fin, current_date)`
+         - `tipo_cambio` = case respecto a `id_suscripcion_anterior` (null→"Nueva", mayor→"Upgrade", menor→"Downgrade", igual→"Misma")
+         - `fecha_churn` = `fecha_fin` si no existe período siguiente, si no, null
+         - `dias_desde_cambio_anterior` = días entre `fecha_inicio_anterior` y `fecha_fin` si aplica churn
+         - `dias_desde_inicio_cuenta` = días entre `fecha_primer_suscripcion` y `fecha_fin` si aplica churn
+      4. Resolver claves SCD2:
+         - `id_dim_cuenta` según `id_cuenta` vigente en `dim_cuentas_base` en `fecha_inicio`
+         - `id_dim_suscripcion` (y la anterior) según validez de `dim_suscripciones` en `fecha_inicio`
+    columns:
+      - name: id_dim_cuenta
+        description: Clave de dimensión de cuenta válida para `fecha_inicio` del período
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_cuentas_base')
+              field: id_dim_cuenta
+      - name: id_dim_suscripcion
+        description: Clave de dimensión de la suscripción válida para `fecha_inicio` del período
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_suscripciones')
+              field: id_dim_suscripcion
+      - name: id_dim_suscripcion_anterior
+        description: Clave de dimensión de la suscripción anterior válida al inicio del período (si existe)
+      - name: fecha_inicio
+        description: Fecha de inicio del período de la suscripción en la cuenta
+        data_tests: [not_null]
+      - name: fecha_fin
+        description: Fecha de fin del período (nulo si el período está aún vigente)
+      - name: duracion_dias
+        description: Duración del período en días (usa `current_date` cuando no hay `fecha_fin`)
+      - name: tipo_cambio
+        description: Tipo de cambio del plan respecto al período anterior (Upgrade/Downgrade/Misma/Nueva)
+        data_tests:
+          - accepted_values:
+              values: ['Nueva Suscripción', 'Upgrade', 'Downgrade', 'Misma Suscripción']
+      - name: fecha_churn
+        description: Fecha de churn cuando hay `fecha_fin` y no existe suscripción siguiente
+      - name: dias_desde_cambio_anterior
+        description: Días transcurridos entre el inicio del período anterior y el churn del período actual (solo cuando aplica churn)
+      - name: dias_desde_inicio_cuenta
+        description: Días transcurridos entre la primera suscripción de la cuenta y el churn del período actual (solo cuando aplica churn)
+
+  - name: fact_rfm
+    description: |
+      Hecho de segmentación RFM (Recency, Frequency, Monetary) calculado para cuentas activas en
+      planes no gratuitos, con una ventana de análisis móvil de 6 meses con respecto a una fecha
+      de referencia parametrizable (`var('fecha_rfm', '2024-01-01')`).
+
+      Lógica de negocio detallada:
+      - Universo de análisis: cuentas con suscripción no "Gratuita" vigente en la fecha de referencia y con al menos 6 meses desde su creación.
+      - Recency (R): fecha más reciente entre tres tipos de actividad del último semestre: creación de contenidos (`stg_contents`), pagos de suscripción (`stg_subscription_payments`) y compras de funcionalidades premium (`stg_account_premium_features`). Se reporta además `dias_desde_ultima_actividad` hasta la fecha de referencia.
+      - Frequency (F): suma de la cantidad de eventos de las tres actividades anteriores dentro de los últimos 6 meses.
+      - Monetary (M): suma de los montos pagados en suscripciones y funcionalidades premium en el mismo período.
+      - Escoring: se calculan quintiles con `ntile(5)` para cada métrica; los scores se combinan en el formato `R-F-M`.
+      - Segmentación: reglas determinísticas basadas en los scores (por ejemplo, "Campeones" para R,F,M ≥ 4). Las categorías incluyen, entre otras, "Campeones", "Clientes Leales", "Clientes de Alto Valor",
+        "Clientes Potenciales", "Nuevos Clientes", "Necesitan Atención", "En Riesgo", "No se pueden perder",
+        "Clientes Dormidos", "Perdidos" y "Clientes Regulares".
+      - Trazabilidad temporal: `id_dim_cuenta` se resuelve contra `dim_cuentas_base` vigente en la fecha de referencia; `id_dim_fecha_rfm` es la propia fecha de cálculo.
+
+      Pipeline funcional (de extremo a extremo):
+      1. Seleccionar universo base (`cuentas_base`):
+         - Cuentas con `id_dim_cuenta` que tengan una suscripción no "Gratuita" vigente en `fecha_rfm`.
+         - Cuentas con `fecha_creacion` al menos 6 meses antes de `fecha_rfm`.
+      2. Calcular Recency por cuenta:
+         - `ultima_creacion_contenido` = max(fecha_creacion) en `stg_contents` dentro de [-6m, fecha_rfm]
+         - `ultimo_pago` = max(fecha_pago) en `stg_subscription_payments` dentro de [-6m, fecha_rfm]
+         - `ultima_compra_feature` = max(fecha_compra) en `stg_account_premium_features` dentro de [-6m, fecha_rfm]
+         - `ultima_actividad` = max de las tres fechas anteriores; `dias_desde_ultima_actividad` = diferencia hasta `fecha_rfm`
+      3. Calcular Frequency por cuenta:
+         - `total_contenidos_creados` = conteo de contenidos en la ventana
+         - `total_pagos_realizados` = conteo de pagos en la ventana
+         - `total_features_compradas` = conteo de compras en la ventana
+         - `frecuencia_total` = suma de los tres conteos
+      4. Calcular Monetary por cuenta:
+         - `total_pagado_suscripciones` = suma de `monto` de pagos en la ventana
+         - `total_pagado_features` = suma de `monto_pagado` de compras en la ventana
+         - `valor_monetario_total` = suma de ambos
+      5. Escoring por quintiles:
+         - `recency_score` = ntile(5) sobre `dias_desde_ultima_actividad` (orden descendente para que menor días → mayor score)
+         - `frequency_score` = ntile(5) sobre `frecuencia_total` (orden ascendente)
+         - `monetary_score` = ntile(5) sobre `valor_monetario_total` (orden ascendente)
+      6. Segmentación:
+         - Asignar `segmento_rfm` mediante reglas case basadas en umbrales de scores (p. ej., R≥4∧F≥4∧M≥4 → "Campeones", etc.)
+      7. Resolución dimensional y salida:
+         - Mapear `id_cuenta` a `id_dim_cuenta` vigente en `dim_cuentas_base` a la fecha `fecha_rfm`
+         - Emitir un registro por cuenta con `id_dim_fecha_rfm` = `fecha_rfm`
+    columns:
+      - name: id_dim_cuenta
+        description: Clave de dimensión de cuenta vigente en la fecha de referencia del cálculo RFM
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_cuentas_base')
+              field: id_dim_cuenta
+      - name: ultima_actividad
+        description: Fecha más reciente entre las actividades consideradas para R
+      - name: dias_desde_ultima_actividad
+        description: Días transcurridos desde `ultima_actividad` hasta la fecha de referencia
+      - name: total_contenidos_creados
+        description: Conteo de contenidos creados por la cuenta en los últimos 6 meses (para F)
+      - name: total_pagos_realizados
+        description: Conteo de pagos de suscripción en los últimos 6 meses (para F)
+      - name: total_features_compradas
+        description: Conteo de compras de funcionalidades premium en los últimos 6 meses (para F)
+      - name: frecuencia_total
+        description: Suma total de eventos considerados para Frequency
+      - name: total_pagado_suscripciones
+        description: Suma de montos pagados en suscripciones en los últimos 6 meses (para M)
+      - name: total_pagado_features
+        description: Suma de montos pagados en funcionalidades premium en los últimos 6 meses (para M)
+      - name: valor_monetario_total
+        description: Suma total de montos considerados para Monetary
+      - name: recency_score
+        description: Quintil (1-5) de Recency (menor días desde última actividad -> mayor score)
+        data_tests:
+          - accepted_values:
+              values: [1,2,3,4,5]
+              quote: false
+      - name: frequency_score
+        description: Quintil (1-5) de Frequency
+        data_tests:
+          - accepted_values:
+              values: [1,2,3,4,5]
+              quote: false
+      - name: monetary_score
+        description: Quintil (1-5) de Monetary
+        data_tests:
+          - accepted_values:
+              values: [1,2,3,4,5]
+              quote: false
+      - name: rfm_score
+        description: Cadena con el score combinado en formato R-F-M
+      - name: segmento_rfm
+        description: |
+          Segmento asignado por reglas determinísticas basadas en los scores R, F y M
+          (donde R = `recency_score`, F = `frequency_score`, M = `monetary_score`). Las reglas
+          se evalúan en este orden y asignan el primer segmento que cumple:
+          - Campeones: R >= 4 y F >= 4 y M >= 4
+          - Clientes Leales: R >= 4 y F >= 3 y M >= 3 y (F < 4 o M < 4)
+          - Clientes de Alto Valor: R >= 4 y M >= 4 y F < 3
+          - Clientes Potenciales: R >= 4 y F >= 2 y M >= 2 y (F < 3 o M < 4)
+          - Nuevos Clientes: R = 5 y F <= 2 y M <= 2
+          - Necesitan Atención: R <= 3 y F >= 4 y M >= 4
+          - En Riesgo: R <= 3 y F >= 2 y M >= 2 y (F < 4 o M < 4)
+          - No se pueden perder: R <= 2 y F >= 4 y M >= 4
+          - Clientes Dormidos: R <= 2 y F <= 2 y M <= 2
+          - Perdidos: R = 1 y F = 1 y M = 1
+          - Clientes Regulares: cualquier otra combinación que no cumpla las anteriores        
+        data_tests:
+          - accepted_values:
+              values:
+                - Campeones
+                - Clientes Leales
+                - Clientes de Alto Valor
+                - Clientes Potenciales
+                - Nuevos Clientes
+                - Necesitan Atención
+                - En Riesgo
+                - No se pueden perder
+                - Clientes Dormidos
+                - Perdidos
+                - Clientes Regulares
+      - name: id_dim_fecha_rfm
+        description: Fecha de referencia del cálculo RFM (también actúa como partición temporal del hecho)
+        data_tests: [not_null]

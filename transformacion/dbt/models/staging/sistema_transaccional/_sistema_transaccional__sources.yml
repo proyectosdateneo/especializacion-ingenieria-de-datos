@@ -5,8 +5,7 @@ sources:
     description: |
       Fuente de datos que contiene la información de cuentas, suscripciones y contenidos
       del sistema transaccional. Incluye las tablas de cuentas, suscripciones, relación
-      cuenta-suscripción, contenidos y atributos de contenidos. También se cuenta con las tablas donde se
-      reflejan los pagos que realizan las cuentas.
+      cuenta-suscripción, contenidos y atributos de contenidos.
     schema: |
       {%- if target.name == "dev" -%} raw_datavision_dev
       {%- elif target.name == "prod" -%} raw_datavision_prod
@@ -16,10 +15,13 @@ sources:
       - name: accounts
         description: |
           Tabla que almacena la información de las cuentas de usuario, incluyendo sus datos
-          básicos y de contacto. Cada cuenta puede tener más de suscripción asociada pero solo una vigente.
+          básicos y de contacto. Cada cuenta puede tener una suscripción asociada.
         columns:
           - name: account_id
             description: Identificador único de la cuenta
+            tests:
+              - not_null
+              - unique
           - name: account_name
             description: Nombre de la cuenta
           - name: email
@@ -36,6 +38,9 @@ sources:
         columns:
           - name: subscription_id
             description: Identificador único del tipo de suscripción
+            tests:
+              - not_null
+              - unique
           - name: subscription_name
             description: Nombre del plan, por ejemplo Gratuita, Premium o Empresarial
           - name: max_contents_per_month
@@ -49,13 +54,26 @@ sources:
         description: |
           Tabla que mantiene la relación entre cuentas y suscripciones, permitiendo
           que una cuenta tenga una suscripción activa en un momento dado.
-          Esta tabla es histórica, cuenta con una columna de fecha de inicio y fin de suscripción.
-          Si el último registro para una cuenta tiene fin no nulo, significa que la cuenta abandonó la plataforma.
         columns:
+          - name: account_subscription_id
+            description: Identificador único de la suscripción por cuenta
+            tests:
+              - not_null
+              - unique
           - name: account_id
             description: Identificador de la cuenta
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
           - name: subscription_id
             description: Identificador del tipo de suscripción
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'subscriptions')
+                  field: subscription_id
           - name: created_at
             description: Marca de tiempo cuando se creó la relación
           - name: updated_at
@@ -68,8 +86,16 @@ sources:
         columns:
           - name: content_id
             description: Identificador único del contenido
+            tests:
+              - not_null
+              - unique
           - name: account_id
             description: Identificador de la cuenta que creó el contenido
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
           - name: title
             description: Título del contenido
           - name: description
@@ -79,21 +105,20 @@ sources:
           - name: created_at
             description: Marca de tiempo cuando se creó el contenido
           - name: updated_at
-            description: Marca de tiempo cuando se actualizó por última vez el contenido. Campo utilizado en la ingesta para hacer carga incremental.
+            description: Marca de tiempo cuando se actualizó por última vez el contenido
 
       - name: content_attributes
         description: |
           Tabla que almacena atributos adicionales de los contenidos, como categoría
-          y duración, en un formato clave-valor (Entity-Attribute-Value) flexible.
-          Cada fila de esta tabla representa un atributo de un contenido, con el
-          nombre del atributo y su valor asociado. Las columnas de la tabla son:
-          - attribute_name: El nombre del atributo, por ejemplo "Categoría" o "Duración".
-          - string_value, decimal_value, boolean_value, etc: El valor del atributo,
-            dependiendo del tipo de valor que se almacene. Por ejemplo, si el atributo
-            es "Categoría", el valor se almacena en la columna string_value.
+          y duración, en un formato clave-valor.
         columns:
           - name: content_id
             description: Identificador del contenido al que pertenece el atributo
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'contents')
+                  field: content_id
           - name: attribute_name
             description: Nombre del atributo, por ejemplo Categoría o Duración
           - name: string_value
@@ -112,8 +137,16 @@ sources:
         columns:
           - name: payment_id
             description: Identificador único del pago
+            tests:
+              - not_null
+              - unique
           - name: account_subscription_id
             description: Identificador de la suscripción de la cuenta
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts_subscription')
+                  field: account_subscription_id
           - name: payment_date
             description: Fecha en que se realizó el pago
           - name: amount
@@ -130,6 +163,9 @@ sources:
         columns:
           - name: feature_id
             description: Identificador único de la característica premium
+            tests:
+              - not_null
+              - unique
           - name: feature_name
             description: Nombre de la característica premium
           - name: description
@@ -148,11 +184,25 @@ sources:
         columns:
           - name: account_feature_id
             description: Identificador único de la compra de característica premium
+            tests:
+              - not_null
+              - unique
           - name: account_id
             description: Identificador de la cuenta que compró la característica
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
           - name: feature_id
             description: Identificador de la característica premium comprada
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'premium_features')
+                  field: feature_id
           - name: purchase_date
             description: Fecha en que se realizó la compra
           - name: amount_paid
             description: Monto pagado por la característica premium
+

@@ -1,0 +1,205 @@
+version: 2
+
+models:
+  - name: stg_accounts
+    description: |
+      Registro centralizado de todas las cuentas de usuario en la plataforma.
+      
+      **Lógica de negocio:**
+      - Representa la entidad base del sistema, siendo el punto de partida para la relación con suscripciones y contenidos
+      - Permite el seguimiento del ciclo de vida de los usuarios desde su registro
+      - Facilita el análisis de crecimiento de la base de usuarios y su comportamiento
+      - Sirve como referencia para identificar usuarios únicos en todo el sistema
+    columns:
+      - name: id_cuenta
+        description: Identificador único de la cuenta (PK)
+        tests: [not_null, unique]
+      - name: nombre_cuenta
+        description: Nombre de la cuenta de usuario
+      - name: correo_electronico
+        description: Dirección de correo electrónico asociada a la cuenta
+      - name: fecha_creacion
+        description: Fecha y hora de creación del registro
+      - name: fecha_actualizacion
+        description: |
+          Fecha y hora de la última actualización del registro.
+          Se utiliza para el filtro incremental.
+
+  - name: stg_subscriptions
+    description: |
+      Define los diferentes planes de suscripción ofrecidos en la plataforma.
+      
+      **Lógica de negocio:**
+      - Establece los límites de creación de contenido según el nivel de suscripción
+      - Permite la segmentación de usuarios por tipo de plan contratado
+      - Facilita el análisis de adopción de cada plan y su impacto en el uso de la plataforma
+      - Sirve como base para el cálculo de métricas de engagement por nivel de suscripción
+    columns:
+      - name: id_suscripcion
+        description: Identificador único del tipo de suscripción (PK)
+        tests: [not_null, unique]
+      - name: nombre_suscripcion
+        description: Nombre descriptivo del plan de suscripción
+      - name: max_contenidos_mensuales
+        description: Límite de contenidos que se pueden crear por mes
+      - name: fecha_creacion
+        description: Fecha y hora de creación del registro
+      - name: fecha_actualizacion
+        description: Fecha y hora de la última actualización del registro
+
+  - name: stg_accounts_subscription
+    description: |
+      Relación entre cuentas y suscripciones, indicando qué cuenta tiene qué tipo de suscripción
+      activa y durante qué período.
+      
+      **Lógica de negocio:**
+      - Permite el seguimiento del historial completo de suscripciones de cada usuario
+      - Registra períodos de suscripción con fechas de inicio y fin, permitiendo analizar patrones de renovación y cancelación
+      - Facilita la identificación de la suscripción activa de un usuario en un momento determinado
+      - Soporta el modelo de negocio de suscripciones recurrentes con diferentes niveles de servicio
+    columns:
+      - name: id_suscripcion_cuenta
+        description: Identificador único de la relación cuenta-suscripción (PK)
+        tests: [not_null, unique]
+      - name: id_cuenta
+        description: Referencia a la cuenta (FK a stg_accounts)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: id_cuenta
+      - name: id_suscripcion
+        description: Referencia al tipo de suscripción (FK a stg_subscriptions)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_subscriptions')
+              field: id_suscripcion
+      - name: fecha_inicio
+        description: Fecha de inicio de la suscripción
+      - name: fecha_fin
+        description: Fecha de finalización de la suscripción (puede ser nula si es activa)
+
+  - name: stg_contents
+    description: |
+      Contenidos creados por los usuarios, enriquecidos con sus atributos dinámicos.
+      
+      **Lógica de negocio:**
+      - Los contenidos tienen atributos dinámicos (como categoría y duración) que están almacenados en una tabla separada (content_attributes) en formato clave-valor
+      - Este modelo transforma esa estructura relacional en un esquema más amigable, llevando los atributos como columnas directas
+      - Maneja la posibilidad de que un contenido pueda o no tener atributos asociados
+      - Establece valores por defecto cuando la información está ausente para garantizar la integridad de los datos
+      - Permite el análisis de contenidos junto con sus características sin necesidad de realizar joins adicionales
+    columns:
+      - name: id_contenido
+        description: Identificador único del contenido (PK)
+        tests: [not_null, unique]
+      - name: id_cuenta
+        description: Referencia a la cuenta creadora (FK a stg_accounts)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: id_cuenta
+      - name: titulo
+        description: Título del contenido, con valor por defecto 'Sin título'
+      - name: descripcion
+        description: Descripción del contenido, con valor por defecto 'Sin descripción'
+      - name: tipo_contenido
+        description: Tipo de contenido, con valor por defecto 'Sin tipo'
+      - name: categoria
+        description: Categoría del contenido (atributo dinámico)
+      - name: duracion
+        description: Duración del contenido en minutos (atributo dinámico)
+      - name: fecha_creacion
+        description: Fecha y hora de creación del contenido
+      - name: fecha_actualizacion
+        description: |
+          Fecha y hora de la última actualización del contenido o sus atributos.
+          Se utiliza para el filtro incremental.
+
+  - name: stg_subscription_payments
+    description: |
+      Historial de transacciones de pago asociadas a las suscripciones de los usuarios.
+      
+      **Lógica de negocio:**
+      - Registra cada transacción de pago realizada por los usuarios en sus suscripciones
+      - Permite el análisis de ingresos recurrentes (MRR/ARR) por tipo de suscripción
+      - Facilita la identificación de patrones de pago y tasas de retención
+      - Soporta la conciliación financiera con los procesadores de pago
+    columns:
+      - name: id_pago
+        description: Identificador único del pago (PK)
+        tests: [not_null, unique]
+      - name: id_suscripcion_cuenta
+        description: Referencia a la suscripción de la cuenta (FK a stg_accounts_subscription)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts_subscription')
+              field: id_suscripcion_cuenta
+      - name: fecha_pago
+        description: Fecha en que se realizó el pago
+      - name: monto
+        description: Monto del pago
+      - name: metodo_pago
+        description: Método de pago utilizado
+      - name: ciclo_facturacion
+        description: Período de facturación al que corresponde el pago
+
+  - name: stg_premium_features
+    description: |
+      Inventario de funcionalidades premium que los usuarios pueden adquirir además de su suscripción base.
+      
+      **Lógica de negocio:**
+      - Permite ofrecer funcionalidades adicionales de forma individual más allá del plan de suscripción
+      - Facilita la creación de paquetes personalizados de características para los usuarios
+      - Soporta estrategias de upselling y cross-selling de funcionalidades
+      - Permite el análisis de adopción de cada característica premium
+    columns:
+      - name: id_feature
+        description: Identificador único de la característica premium (PK)
+        tests: [not_null, unique]
+      - name: nombre_feature
+        description: Nombre descriptivo de la característica
+      - name: descripcion
+        description: Descripción detallada de la característica
+      - name: precio_base
+        description: Precio base de la característica
+      - name: fecha_creacion
+        description: Fecha y hora de creación del registro
+      - name: fecha_actualizacion
+        description: Fecha y hora de la última actualización del registro
+
+  - name: stg_account_premium_features
+    description: |
+      Registro de características premium que los usuarios han adquirido individualmente.
+      
+      **Lógica de negocio:**
+      - Permite el seguimiento de características adicionales que los usuarios compran más allá de su plan base
+      - Facilita la gestión de permisos y accesos a funcionalidades premium
+      - Soporta el análisis de patrones de compra de características individuales
+      - Permite medir el impacto de características específicas en la retención de usuarios
+    columns:
+      - name: id_cuenta_feature
+        description: Identificador único de la relación cuenta-característica (PK)
+        tests: [not_null, unique]
+      - name: id_cuenta
+        description: Referencia a la cuenta (FK a stg_accounts)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: id_cuenta
+      - name: id_feature
+        description: Referencia a la característica premium (FK a stg_premium_features)
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_premium_features')
+              field: id_feature
+      - name: fecha_compra
+        description: Fecha en que se adquirió la característica
+      - name: monto_pagado
+        description: Monto pagado por la característica (puede diferir del precio base)
+
