@@ -1,0 +1,46 @@
+name: 'proyecto_datavision'
+version: '1.0.0'
+
+profile: 'datavision'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  proyecto_datavision:
+    +num_retries: 0
+    +materialized: incremental
+    +table_type: iceberg
+    +incremental_strategy: merge
+    +format: parquet
+    +s3_data_naming: schema_table_unique
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      sistema_transaccional:
+        +schema: staging_sistema_transaccional
+      +s3_data_dir: "s3://dateneo-staging-us-west-2-375612485931" #"{{ var('bucket_staging') }}"
+    marts:
+      +schema: analytics_datavision
+      +s3_data_dir: "s3://dateneo-analytics-us-west-2-375612485931" #{{ var('bucket_analytics') }}
+      dim_tiempo:
+        +materialized: table
+        +table_type: hive
+
+snapshots:
+  proyecto_datavision:
+    +num_retries: 0
+    +table_type: iceberg
+    +target_schema: "snapshots_{{ target.name }}"
+    +strategy: timestamp
+    +invalidate_hard_deletes: true
+    +s3_data_dir: "s3://dateneo-staging-us-west-2-375612485931"

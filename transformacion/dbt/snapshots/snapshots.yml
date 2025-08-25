@@ -1,0 +1,23 @@
+version: 2
+
+snapshots:
+  - name: accounts_snapshot
+    relation: ref('stg_accounts')
+    description: "Snapshot de la tabla de cuentas para mantener el historial de cambios"
+    config:
+      unique_key: id_cuenta
+      updated_at: fecha_actualizacion
+
+  - name: contents_snapshot
+    relation: ref('stg_contents')
+    description: "Snapshot de la tabla de contenidos para mantener el historial de cambios"
+    config:
+      unique_key: id_contenido
+      updated_at: fecha_actualizacion
+
+  - name: subscriptions_snapshot
+    relation: ref('stg_subscriptions')
+    description: "Snapshot de la tabla de suscripciones para mantener el historial de cambios"
+    config:
+      unique_key: id_suscripcion
+      updated_at: fecha_actualizacion

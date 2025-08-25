@@ -199,3 +199,6 @@ ingesta/.dlt/secrets.toml
 ingesta/schemas/export/sql_database.schema.yaml
 ingesta/schemas/import/sql_database.schema.yaml
 *.duckdb
+profiles.yml
+.user.yml
+*.zip

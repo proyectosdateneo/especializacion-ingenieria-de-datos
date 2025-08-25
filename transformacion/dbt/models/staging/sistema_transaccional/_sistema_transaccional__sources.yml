@@ -1,0 +1,208 @@
+version: 2
+
+sources:
+  - name: raw_datavision
+    description: |
+      Fuente de datos que contiene la información de cuentas, suscripciones y contenidos
+      del sistema transaccional. Incluye las tablas de cuentas, suscripciones, relación
+      cuenta-suscripción, contenidos y atributos de contenidos.
+    schema: |
+      {%- if target.name == "dev" -%} raw_datavision_dev
+      {%- elif target.name == "prod" -%} raw_datavision_prod
+      {%- else -%} invalid_schema
+      {%- endif -%}
+    tables:
+      - name: accounts
+        description: |
+          Tabla que almacena la información de las cuentas de usuario, incluyendo sus datos
+          básicos y de contacto. Cada cuenta puede tener una suscripción asociada.
+        columns:
+          - name: account_id
+            description: Identificador único de la cuenta
+            tests:
+              - not_null
+              - unique
+          - name: account_name
+            description: Nombre de la cuenta
+          - name: email
+            description: Correo electrónico asociado a la cuenta
+          - name: created_at
+            description: Marca de tiempo cuando se creó la cuenta
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la cuenta
+
+      - name: subscriptions
+        description: |
+          Tabla que almacena los diferentes tipos de suscripción disponibles en el sistema,
+          incluyendo sus límites y características.
+        columns:
+          - name: subscription_id
+            description: Identificador único del tipo de suscripción
+            tests:
+              - not_null
+              - unique
+          - name: subscription_name
+            description: Nombre del plan, por ejemplo Gratuita, Premium o Empresarial
+          - name: max_contents_per_month
+            description: Límite de contenidos que se pueden crear por mes
+          - name: created_at
+            description: Marca de tiempo cuando se creó el tipo de suscripción
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el tipo de suscripción
+
+      - name: accounts_subscription
+        description: |
+          Tabla que mantiene la relación entre cuentas y suscripciones, permitiendo
+          que una cuenta tenga una suscripción activa en un momento dado.
+        columns:
+          - name: account_subscription_id
+            description: Identificador único de la suscripción por cuenta
+            tests:
+              - not_null
+              - unique
+          - name: account_id
+            description: Identificador de la cuenta
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
+          - name: subscription_id
+            description: Identificador del tipo de suscripción
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'subscriptions')
+                  field: subscription_id
+          - name: created_at
+            description: Marca de tiempo cuando se creó la relación
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la relación
+
+      - name: contents
+        description: |
+          Tabla que almacena la información de los contenidos creados por las cuentas,
+          incluyendo su tipo, título y descripción.
+        columns:
+          - name: content_id
+            description: Identificador único del contenido
+            tests:
+              - not_null
+              - unique
+          - name: account_id
+            description: Identificador de la cuenta que creó el contenido
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
+          - name: title
+            description: Título del contenido
+          - name: description
+            description: Descripción detallada del contenido
+          - name: content_type
+            description: Tipo de contenido, por ejemplo video, artículo o podcast
+          - name: created_at
+            description: Marca de tiempo cuando se creó el contenido
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el contenido
+
+      - name: content_attributes
+        description: |
+          Tabla que almacena atributos adicionales de los contenidos, como categoría
+          y duración, en un formato clave-valor.
+        columns:
+          - name: content_id
+            description: Identificador del contenido al que pertenece el atributo
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'contents')
+                  field: content_id
+          - name: attribute_name
+            description: Nombre del atributo, por ejemplo Categoría o Duración
+          - name: string_value
+            description: Valor del atributo si es de tipo texto
+          - name: decimal_value
+            description: Valor del atributo si es de tipo numérico
+          - name: created_at
+            description: Marca de tiempo cuando se creó el atributo
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez el atributo
+
+      - name: subscription_payments
+        description: |
+          Tabla que almacena los pagos realizados por las suscripciones de las cuentas,
+          incluyendo el monto, método de pago y ciclo de facturación.
+        columns:
+          - name: payment_id
+            description: Identificador único del pago
+            tests:
+              - not_null
+              - unique
+          - name: account_subscription_id
+            description: Identificador de la suscripción de la cuenta
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts_subscription')
+                  field: account_subscription_id
+          - name: payment_date
+            description: Fecha en que se realizó el pago
+          - name: amount
+            description: Monto del pago
+          - name: payment_method
+            description: Método de pago utilizado
+          - name: billing_cycle
+            description: Ciclo de facturación del pago
+
+      - name: premium_features
+        description: |
+          Tabla que almacena las características premium disponibles en el sistema,
+          incluyendo su descripción y precio base.
+        columns:
+          - name: feature_id
+            description: Identificador único de la característica premium
+            tests:
+              - not_null
+              - unique
+          - name: feature_name
+            description: Nombre de la característica premium
+          - name: description
+            description: Descripción detallada de la característica
+          - name: base_price
+            description: Precio base de la característica premium
+          - name: created_at
+            description: Marca de tiempo cuando se creó la característica
+          - name: updated_at
+            description: Marca de tiempo cuando se actualizó por última vez la característica
+
+      - name: account_premium_features
+        description: |
+          Tabla que almacena las características premium compradas por las cuentas,
+          incluyendo la fecha de compra y el monto pagado.
+        columns:
+          - name: account_feature_id
+            description: Identificador único de la compra de característica premium
+            tests:
+              - not_null
+              - unique
+          - name: account_id
+            description: Identificador de la cuenta que compró la característica
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'accounts')
+                  field: account_id
+          - name: feature_id
+            description: Identificador de la característica premium comprada
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw_datavision', 'premium_features')
+                  field: feature_id
+          - name: purchase_date
+            description: Fecha en que se realizó la compra
+          - name: amount_paid
+            description: Monto pagado por la característica premium
+
