@@ -28,10 +28,10 @@ models:
     staging:
       sistema_transaccional:
         +schema: staging_sistema_transaccional
-      +s3_data_dir: "s3://dateneo-staging-us-west-2-375612485931" #"{{ var('bucket_staging') }}"
+      +s3_data_dir: "{{ env_var('BUCKET_STAGING') }}" #"s3://dateneo-staging-us-west-2-375612485931" #"{{ var('bucket_staging') }}"
     marts:
       +schema: analytics_datavision
-      +s3_data_dir: "s3://dateneo-analytics-us-west-2-375612485931" #{{ var('bucket_analytics') }}
+      +s3_data_dir: "{{ env_var('BUCKET_ANALYTICS') }}" #"s3://dateneo-analytics-us-west-2-375612485931" #{{ var('bucket_analytics') }}
       dim_tiempo:
         +materialized: table
         +table_type: hive
@@ -43,4 +43,4 @@ snapshots:
     +target_schema: "snapshots_{{ target.name }}"
     +strategy: timestamp
     +invalidate_hard_deletes: true
-    +s3_data_dir: "s3://dateneo-staging-us-west-2-375612485931"
+    +s3_data_dir: "{{ env_var('BUCKET_STAGING') }}" #"s3://dateneo-staging-us-west-2-375612485931"
