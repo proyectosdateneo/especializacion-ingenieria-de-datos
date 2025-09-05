@@ -4,7 +4,7 @@ Utilidades para operadores ECS en Airflow.
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 
 
-def create_ecs_task(cluster, task_definition, container_name, command, task_id):
+def create_ecs_task(cluster, task_definition, container_name, command, task_id, environment=None):
     """
     Crea una tarea ECS con configuración común.
     
@@ -14,10 +14,20 @@ def create_ecs_task(cluster, task_definition, container_name, command, task_id):
         container_name (str): Nombre del contenedor
         command (list): Comando a ejecutar
         task_id (str): ID de la tarea en Airflow
+        environment (list, optional): Variables de entorno adicionales
     
     Returns:
         EcsRunTaskOperator: Operador ECS configurado
     """
+    container_override = {
+        'name': container_name,
+        'command': command
+    }
+    
+    # Agregar variables de entorno si se proporcionan
+    if environment:
+        container_override['environment'] = environment
+    
     return EcsRunTaskOperator(
         task_id=task_id,
         cluster=cluster,
@@ -34,11 +44,6 @@ def create_ecs_task(cluster, task_definition, container_name, command, task_id):
         wait_for_completion=True,
         do_xcom_push=True,
         overrides={
-            'containerOverrides': [
-                {
-                    'name': container_name,
-                    'command': command
-                }
-            ]
+            'containerOverrides': [container_override]
         }
     )

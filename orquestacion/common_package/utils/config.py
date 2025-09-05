@@ -34,3 +34,15 @@ ECS_CONTAINERS = {
     'ingesta': 'ingesta-container',
     'dbt': 'dbt-container'
 }
+
+# Variables de entorno comunes para las tareas ECS
+COMMON_ENVIRONMENT_VARS = [
+    {
+        'name': 'BUCKET_STAGING',
+        'value': 's3://dateneo-staging-us-west-2-375612485931'
+    },
+    {
+        'name': 'BUCKET_ANALYTICS',
+        'value': 's3://dateneo-analytics-us-west-2-375612485931'
+    }
+]

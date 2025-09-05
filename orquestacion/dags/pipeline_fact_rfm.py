@@ -10,7 +10,8 @@ from bruno.common_package.utils import (
     DEFAULT_ARGS, 
     ECS_CLUSTERS, 
     ECS_TASK_DEFINITIONS, 
-    ECS_CONTAINERS
+    ECS_CONTAINERS,
+    COMMON_ENVIRONMENT_VARS
 )
 
 
@@ -43,7 +44,8 @@ def create_dag():
                 '--vars', 
                 'fecha_rfm: {{ ds }}'  # Usa la fecha de ejecución del DAG
             ],
-            task_id='dbt_run_fact_rfm'
+            task_id='dbt_run_fact_rfm',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         return dag

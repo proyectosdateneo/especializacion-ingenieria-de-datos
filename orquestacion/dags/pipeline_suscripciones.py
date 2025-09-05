@@ -3,7 +3,7 @@ DAG principal para orquestar el pipeline de DataVision usando ECS.
 """
 from datetime import datetime
 from airflow import DAG
-from bruno.common_package.utils import create_ecs_task, DEFAULT_ARGS, ECS_CLUSTERS, ECS_TASK_DEFINITIONS, ECS_CONTAINERS
+from bruno.common_package.utils import create_ecs_task, DEFAULT_ARGS, ECS_CLUSTERS, ECS_TASK_DEFINITIONS, ECS_CONTAINERS, COMMON_ENVIRONMENT_VARS
 
 
 
@@ -28,7 +28,8 @@ def create_dag():
             task_definition=ECS_TASK_DEFINITIONS['ingesta'],
             container_name=ECS_CONTAINERS['ingesta'],
             command=['python', '/app/ingesta/ingesta_datavision.py', '--env', 'prod'],
-            task_id='ejecutar_ingesta_ecs'
+            task_id='ejecutar_ingesta_ecs',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # Tareas de DBT después de la ingesta
@@ -39,7 +40,8 @@ def create_dag():
             task_definition=ECS_TASK_DEFINITIONS['transformacion'],
             container_name=ECS_CONTAINERS['dbt'],
             command=['dbt', 'test', '--select', 'source:*'],
-            task_id='dbt_test_sources'
+            task_id='dbt_test_sources',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # 1. Modelos de staging
@@ -48,7 +50,8 @@ def create_dag():
             task_definition=ECS_TASK_DEFINITIONS['transformacion'],
             container_name=ECS_CONTAINERS['dbt'],
             command=['dbt', 'run', '--select', 'staging'],
-            task_id='dbt_run_staging'
+            task_id='dbt_run_staging',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # 2. Tests staging
@@ -60,7 +63,8 @@ def create_dag():
             # El empty mode excluye las validaciones de integridad referencial de los
             # modelos dimensionales de marts contra los staging.
             # Más información: https://docs.getdbt.com/reference/global-configs/indirect-selection
-            task_id='dbt_test_staging'
+            task_id='dbt_test_staging',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # 3. Snapshots
@@ -69,7 +73,8 @@ def create_dag():
             task_definition=ECS_TASK_DEFINITIONS['transformacion'],
             container_name=ECS_CONTAINERS['dbt'],
             command=['dbt', 'snapshot'],
-            task_id='dbt_run_snapshots'
+            task_id='dbt_run_snapshots',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # 4. Modelos marts (excluyendo fact_rfm)
@@ -78,7 +83,8 @@ def create_dag():
             task_definition=ECS_TASK_DEFINITIONS['transformacion'],
             container_name=ECS_CONTAINERS['dbt'],
             command=['dbt', 'run', '--select', 'marts', '--exclude', 'fact_rfm'],
-            task_id='dbt_run_marts'
+            task_id='dbt_run_marts',
+            environment=COMMON_ENVIRONMENT_VARS
         )
 
         # Configurar dependencias
