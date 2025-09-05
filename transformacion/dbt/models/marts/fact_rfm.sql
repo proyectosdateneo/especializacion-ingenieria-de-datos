@@ -1,6 +1,7 @@
 {{
     config(
-        unique_key=['id_dim_fecha_rfm', 'id_dim_cuenta']
+        unique_key=['id_dim_fecha_rfm', 'id_dim_cuenta'],
+        partitioned_by=['id_dim_fecha_rfm']
     )
 }}
 
