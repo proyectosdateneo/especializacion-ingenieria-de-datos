@@ -1,0 +1,51 @@
+# Archivo de checks de calidad de datos usando SodaCL
+# Ejemplos de tests que replican funcionalidad de dbt para demostrar equivalencia
+
+checks for stg_accounts:
+  # Verificar que un campo no sea nulo
+  # Equivalente en dbt: tests: [not_null]
+  - missing_count(id_cuenta) = 0:
+      name: "id_cuenta no puede ser nulo"
+  # Verificar formato de email
+  # Equivalente en dbt: tests: [dbt_utils.expression_is_true: "correo_electronico ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'"]
+  - invalid_count(correo_electronico) = 0:
+      valid format: email
+      name: "correo_electronico debe tener formato válido"
+
+  # Verificar freshness de datos (actualización reciente)
+  # Equivalente en dbt: tests: [dbt_utils.expression_is_true: "fecha_actualizacion >= current_date - interval '1 day'"]
+  # https://docs.soda.io/sodacl-reference/freshness
+  - freshness(fecha_actualizacion) < 1d:
+      name: "Los datos de stg_accounts deben actualizarse diariamente"
+
+checks for stg_subscriptions:
+  # Verificar que un campo sea único
+  # Equivalente en dbt: tests: [unique]
+  - duplicate_count(id_suscripcion) = 0:
+      name: "id_suscripcion debe ser único"
+  # Cross-check. Compara conteo de staging con el de raw
+  - row_count same as subscriptions in raw_dev
+
+checks for stg_accounts_subscription:
+  # Verificar integridad referencial entre tablas
+  # Equivalente en dbt: 
+  # tests:
+  #   - relationships:
+  #       to: ref('stg_accounts')
+  #       field: id_cuenta
+  - values in (id_cuenta) must exist in stg_accounts (id_cuenta):
+      name: "Todas las cuentas en stg_accounts_subscription deben existir en stg_accounts"
+
+checks for stg_contents:
+  # Verificar valores válidos en un campo
+  # Equivalente en dbt: tests: [accepted_values: {values: ['articulo','proyecto','linea_de_tiempo','quiz']}]
+  - invalid_count(tipo_contenido) = 0:
+      valid values: ['articulo','proyecto','linea_de_tiempo','quiz']
+      name: "tipo_contenido debe ser un valor válido"
+
+checks for stg_subscription_payments:
+  # Verificar rango de valores numéricos
+  # Equivalente en dbt: tests: [dbt_utils.expression_is_true: "monto > 0"]
+  - invalid_count(monto) = 0:
+      valid min: 0
+      name: "monto debe ser mayor o igual a 0"

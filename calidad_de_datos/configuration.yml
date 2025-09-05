@@ -1,0 +1,15 @@
+data_source staging_dev:
+  type: athena
+  profile_name: bruno_especializacion
+  region_name: us-west-2
+  staging_dir: s3://dateneo-temp-us-west-2-375612485931/athena/dev
+  schema: staging_sistema_transaccional_dev
+  work_group: datavision-375612485931
+
+data_source raw_dev:
+  type: athena
+  profile_name: bruno_especializacion
+  region_name: us-west-2
+  staging_dir: s3://dateneo-temp-us-west-2-375612485931/athena/dev
+  schema: raw_datavision_dev
+  work_group: datavision-375612485931
