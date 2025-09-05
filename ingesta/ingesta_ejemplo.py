@@ -12,7 +12,7 @@ def ingesta_ejemplo():
         pipeline_name='ejemplo_simple',
         destination='duckdb',  # Base de datos local para el ejemplo
         dataset_name='datos_ejemplo',
-        modo_desarrollo=True # cada vez que se ejecuta el pipeline, se resetea su estado y carga datos a un nuevo dataset, ver https://dlthub.com/docs/general-usage/pipeline#do-experiments-with-dev-mode
+        dev_mode=True # cada vez que se ejecuta el pipeline, se resetea su estado y carga datos a un nuevo dataset, ver https://dlthub.com/docs/general-usage/pipeline#do-experiments-with-dev-mode
     )
     
     # 2. Conectar a la base de datos origen
