@@ -162,12 +162,12 @@ def validar_conteo_tablas(
                 # Conteo en origen
                 with source_conn.cursor() as cursor:
                     cursor.execute(f""" 
-                        -- COMPLETAR AQUÍ: query para contar registros en origen
+                        SELECT COUNT(*) FROM {table}
                     """)
                     source_count = cursor.fetchone()[0]
                 
                 # Conteo en destino
-                query = f"-- COMPLETAR AQUÍ: query para contar registros en destino"
+                query = f"SELECT COUNT(*) FROM {dataset_name}.{table}"
                 result = execute_destination_query(env, dest_conn, query)
                 dest_count = result[0]
                 
@@ -256,7 +256,9 @@ def validar_freshness_tablas(
                 
                 # Consultar el registro más reciente de la tabla
                 query = f"""
-                -- COMPLETAR AQUÍ: query para obtener la fecha más reciente en updated_at
+                SELECT MAX(updated_at) 
+                FROM {dataset_name}.{table}
+                WHERE updated_at IS NOT NULL
                 """
                 
                 result = execute_destination_query(env, dest_conn, query)
@@ -349,7 +351,10 @@ def validar_duplicados_tablas(
                 
                 # Consultar duplicados por clave primaria
                 query = f"""
-                -- COMPLETAR AQUÍ: query para detectar duplicados por clave primaria
+                SELECT {pk_column}, COUNT(*) as count
+                FROM {dataset_name}.{table}
+                GROUP BY {pk_column}
+                HAVING COUNT(*) > 1
                 """
                 
                 result = execute_destination_query(env, dest_conn, query)
@@ -426,6 +431,9 @@ def validar_integridad_referencial_tablas(
     
     print("🔗 Validando integridad referencial...")
     
+    # Obtener claves primarias del esquema
+    primary_keys = get_primary_keys_from_schema()
+    
     # Conexión a destino
     dest_conn = get_destination_connection(env)
     
@@ -447,8 +455,16 @@ def validar_integridad_referencial_tablas(
             for fk_column, parent_table in FK_RELATIONS[table].items():
                 try:
                     # Query para detectar registros huérfanos
+                    # Obtener la clave primaria de la tabla padre
+                    parent_pk = primary_keys.get(parent_table, 'id')  # fallback a 'id' si no se encuentra
+                    
                     query = f"""
-                    -- COMPLETAR AQUÍ: query para encontrar registros huérfanos
+                    SELECT COUNT(*)
+                    FROM {dataset_name}.{table} t
+                    LEFT JOIN {dataset_name}.{parent_table} p 
+                        ON t.{fk_column} = p.{parent_pk}
+                    WHERE t.{fk_column} IS NOT NULL 
+                        AND p.{parent_pk} IS NULL
                     """
                     
                     result = execute_destination_query(env, dest_conn, query)
