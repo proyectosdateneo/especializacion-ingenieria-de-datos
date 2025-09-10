@@ -43,13 +43,28 @@ jobs:
         run: |
           pip install -r transformacion/dbt/requirements.txt
 
-      # 4) Configura DuckDB para unit tests
+      # 4) Crea directorio de perfiles de dbt y genera el archivo profiles.yml
+      - name: Setup dbt profiles
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          datavision:
+            target: unit_test
+            outputs:              
+              unit_test:
+                type: duckdb
+                path: 'unit_test.duckdb'
+                schema: unit_test
+                threads: 1
+          EOF
+
+      # 5) Configura DuckDB para unit tests
       - name: Set up DuckDB for unit tests
         run: |
           cd transformacion/dbt
           python setup_duckdb_for_unit_tests.py
 
-      # 5) Ejecuta snapshots de dbt
+      # 6) Ejecuta snapshots de dbt
       - name: Run dbt snapshots
         run: |
           cd transformacion/dbt
@@ -57,7 +72,7 @@ jobs:
           export BUCKET_ANALYTICS="dummy"
           dbt snapshot --empty --target unit_test
 
-      # 6) Ejecuta modelos de dbt
+      # 7) Ejecuta modelos de dbt
       - name: Run dbt models
         run: |
           cd transformacion/dbt
@@ -65,7 +80,7 @@ jobs:
           export BUCKET_ANALYTICS="dummy"
           dbt run --empty --target unit_test
 
-      # 7) Ejecuta unit tests
+      # 8) Ejecuta unit tests
       - name: Run unit tests
         run: |
           cd transformacion/dbt
