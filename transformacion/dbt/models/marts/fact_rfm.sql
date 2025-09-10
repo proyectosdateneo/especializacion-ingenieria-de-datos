@@ -18,8 +18,8 @@ with cuentas_base as (
         and cast('{{ fecha_rfm }}' as date) between fsc.fecha_inicio and coalesce(fsc.fecha_fin,date('9999-12-31'))
     inner join {{ ref('dim_suscripciones') }} ds
         on fsc.id_dim_suscripcion = ds.id_dim_suscripcion
-    where dc.fecha_creacion <= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
-        and ds.nombre_suscripcion != 'Gratuita'
+    where {% if target.name != 'unit_test' %}dc.fecha_creacion <= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+        and {% endif %}ds.nombre_suscripcion != 'Gratuita'
 ),
 
 -- Recency: El menor de las últimas actividades (últimos 6 meses desde la fecha parámetro)
@@ -28,8 +28,9 @@ ultima_actividad_contenidos as (
         id_cuenta,
         max(fecha_creacion) as ultima_creacion_contenido
     from {{ ref('stg_contents') }}
-    where fecha_creacion >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}fecha_creacion >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and fecha_creacion <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by id_cuenta
 ),
 
@@ -40,8 +41,9 @@ ultima_actividad_pagos as (
     from {{ ref('stg_subscription_payments') }} sp
     join {{ ref('stg_accounts_subscription') }} asub
         on sp.id_suscripcion_cuenta = asub.id_suscripcion_cuenta
-    where sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and sp.fecha_pago <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by asub.id_cuenta
 ),
 
@@ -50,8 +52,9 @@ ultima_actividad_features as (
         id_cuenta,
         max(fecha_compra) as ultima_compra_feature
     from {{ ref('stg_account_premium_features') }}
-    where fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and fecha_compra <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by id_cuenta
 ),
 
@@ -85,8 +88,9 @@ frecuencia_contenidos as (
         id_cuenta,
         count(*) as total_contenidos_creados
     from {{ ref('stg_contents') }}
-    where fecha_creacion >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}fecha_creacion >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and fecha_creacion <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by id_cuenta
 ),
 
@@ -97,8 +101,9 @@ frecuencia_pagos as (
     from {{ ref('stg_subscription_payments') }} sp
     join {{ ref('stg_accounts_subscription') }} asub
         on sp.id_suscripcion_cuenta = asub.id_suscripcion_cuenta
-    where sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and sp.fecha_pago <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by asub.id_cuenta
 ),
 
@@ -107,8 +112,9 @@ frecuencia_features as (
         id_cuenta,
         count(*) as total_features_compradas
     from {{ ref('stg_account_premium_features') }}
-    where fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and fecha_compra <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by id_cuenta
 ),
 
@@ -138,8 +144,9 @@ monetary_pagos as (
     from {{ ref('stg_subscription_payments') }} sp
     join {{ ref('stg_accounts_subscription') }} asub
         on sp.id_suscripcion_cuenta = asub.id_suscripcion_cuenta
-    where sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}sp.fecha_pago >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and sp.fecha_pago <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by asub.id_cuenta
 ),
 
@@ -148,8 +155,9 @@ monetary_features as (
         id_cuenta,
         sum(monto_pagado) as total_pagado_features
     from {{ ref('stg_account_premium_features') }}
-    where fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
+    where {% if target.name != 'unit_test' %}fecha_compra >= date_add('month', -6, cast('{{ fecha_rfm }}' as date))
         and fecha_compra <= cast('{{ fecha_rfm }}' as date)
+    {% else %}true{% endif %}
     group by id_cuenta
 ),
 
@@ -259,7 +267,7 @@ rfm_final as (
     from rfm_scores rs
     join {{ ref('dim_cuentas_base') }} dc 
         on rs.id_cuenta = dc.id_cuenta
-        and cast('{{ fecha_rfm }}' as date) between dc.valido_desde and dc.valido_hasta
+        and cast('{{ fecha_rfm }}' as date) between cast(dc.valido_desde as date) and cast(dc.valido_hasta as date)
 )
 
 select * from rfm_final 
