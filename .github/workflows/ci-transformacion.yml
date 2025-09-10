@@ -47,13 +47,15 @@ jobs:
       - name: Setup dbt profiles
         run: |
           mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml << 'EOF'
+          DB_PATH=$(pwd)/transformacion/dbt/unit_test.duckdb
+          echo "DB_PATH: $DB_PATH"
+          cat > ~/.dbt/profiles.yml << EOF
           datavision:
             target: unit_test
             outputs:              
               unit_test:
                 type: duckdb
-                path: 'unit_test.duckdb'
+                path: '$DB_PATH'
                 schema: unit_test
                 threads: 1
           EOF

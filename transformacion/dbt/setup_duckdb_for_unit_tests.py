@@ -123,7 +123,11 @@ def create_duckdb_tables(conn):
 def main():
     """Función principal."""
     # Conectar a DuckDB usando archivo persistente (como está configurado en profiles.yml)
-    conn = duckdb.connect('unit_test.duckdb')
+    # Usar ruta absoluta para evitar problemas de directorio de trabajo
+    import os
+    db_path = os.path.abspath('unit_test.duckdb')
+    print(f"Creando base de datos DuckDB en: {db_path}")
+    conn = duckdb.connect(db_path)
     
     try:
         # Crear tablas
@@ -146,7 +150,7 @@ def main():
                     print(f"Error en verificación alternativa: {e2}")
         
         print("\n¡DuckDB configurado exitosamente para unit tests!")
-        
+                
     except Exception as e:
         print(f"Error: {e}")
     finally:
