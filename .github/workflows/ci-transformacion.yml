@@ -1,0 +1,74 @@
+# Nombre visible del workflow en la pestaña Actions
+name: CI Transformación
+
+on:
+  pull_request:
+    # Se ejecuta solo cuando cambian archivos de transformación o el propio workflow
+    paths:
+      - "transformacion/**"
+      - ".github/workflows/ci-transformacion.yml"
+  # Bloque opcional como red de seguridad si alguien pushea directo a main.
+  # Si querés solo PR, podés eliminar este bloque "push".
+  push:
+    branches: [main]
+    paths:
+      - "transformacion/**"
+
+# Restringe el token automático de GitHub Actions a solo lectura (más seguro)
+permissions:
+  contents: read
+
+# Evita ejecuciones superpuestas del mismo PR/rama: cancela la anterior y corre la última
+concurrency:
+  group: ci-transformacion-${{ github.ref }}   # agrupa por rama/PR
+  cancel-in-progress: true              # cancela ejecuciones previas en curso
+
+jobs:
+  test-transformacion:
+    runs-on: ubuntu-latest  # runner hospedado por GitHub
+    
+    steps:
+      # 1) Descarga el repo (el código del PR)
+      - uses: actions/checkout@v4
+
+      # 2) Prepara Python con cache de pip basado en requirements.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: transformacion/dbt/requirements.txt
+
+      # 3) Instala dependencias del módulo de transformación
+      - name: Install deps
+        run: |
+          pip install -r transformacion/dbt/requirements.txt
+
+      # 4) Configura DuckDB para unit tests
+      - name: Set up DuckDB for unit tests
+        run: |
+          cd transformacion/dbt
+          python setup_duckdb_for_unit_tests.py
+
+      # 5) Ejecuta snapshots de dbt
+      - name: Run dbt snapshots
+        run: |
+          cd transformacion/dbt
+          export BUCKET_STAGING="dummy"
+          export BUCKET_ANALYTICS="dummy"
+          dbt snapshot --empty --target unit_test
+
+      # 6) Ejecuta modelos de dbt
+      - name: Run dbt models
+        run: |
+          cd transformacion/dbt
+          export BUCKET_STAGING="dummy"
+          export BUCKET_ANALYTICS="dummy"
+          dbt run --empty --target unit_test
+
+      # 7) Ejecuta unit tests
+      - name: Run unit tests
+        run: |
+          cd transformacion/dbt
+          export BUCKET_STAGING="dummy"
+          export BUCKET_ANALYTICS="dummy"
+          dbt test --select "fact_rfm,test_type:unit" --target unit_test

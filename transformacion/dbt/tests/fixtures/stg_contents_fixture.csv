@@ -1,0 +1,23 @@
+id_contenido,id_cuenta,titulo,descripcion,tipo_contenido,categoria,duracion,fecha_creacion,fecha_actualizacion
+1,1,Contenido Reciente 1,Descripción contenido 1,Video,Tutorial,30,2023-12-15,2023-12-15
+2,1,Contenido Reciente 2,Descripción contenido 2,Articulo,Noticia,15,2023-12-20,2023-12-20
+3,1,Contenido Reciente 3,Descripción contenido 3,Podcast,Entrevista,45,2023-12-25,2023-12-25
+4,2,Contenido Moderado 1,Descripción contenido 4,Video,Tutorial,25,2023-11-10,2023-11-10
+5,2,Contenido Moderado 2,Descripción contenido 5,Articulo,Noticia,20,2023-11-20,2023-11-20
+6,3,Contenido Reciente Alto Valor,Descripción contenido 6,Video,Tutorial,60,2023-12-10,2023-12-10
+7,4,Contenido Potencial 1,Descripción contenido 7,Articulo,Noticia,10,2023-10-15,2023-10-15
+8,4,Contenido Potencial 2,Descripción contenido 8,Video,Tutorial,35,2023-10-25,2023-10-25
+9,5,Contenido Nuevo 1,Descripción contenido 9,Podcast,Entrevista,20,2023-12-01,2023-12-01
+10,6,Contenido Antiguo 1,Descripción contenido 10,Video,Tutorial,40,2023-06-15,2023-06-15
+11,6,Contenido Antiguo 2,Descripción contenido 11,Articulo,Noticia,25,2023-07-20,2023-07-20
+12,6,Contenido Antiguo 3,Descripción contenido 12,Podcast,Entrevista,50,2023-08-10,2023-08-10
+13,7,Contenido Riesgo 1,Descripción contenido 13,Video,Tutorial,30,2023-05-15,2023-05-15
+14,7,Contenido Riesgo 2,Descripción contenido 14,Articulo,Noticia,15,2023-06-20,2023-06-20
+15,8,Contenido No Perder 1,Descripción contenido 15,Video,Tutorial,45,2023-04-10,2023-04-10
+16,8,Contenido No Perder 2,Descripción contenido 16,Articulo,Noticia,30,2023-05-25,2023-05-25
+17,8,Contenido No Perder 3,Descripción contenido 17,Podcast,Entrevista,55,2023-07-15,2023-07-15
+18,9,Contenido Dormido 1,Descripción contenido 18,Video,Tutorial,20,2023-02-10,2023-02-10
+19,10,Contenido Perdido 1,Descripción contenido 19,Articulo,Noticia,10,2023-01-15,2023-01-15
+20,11,Contenido Regular 1,Descripción contenido 20,Video,Tutorial,25,2023-09-15,2023-09-15
+21,11,Contenido Regular 2,Descripción contenido 21,Articulo,Noticia,18,2023-10-10,2023-10-10
+22,12,Contenido Regular 3,Descripción contenido 22,Podcast,Entrevista,35,2023-08-20,2023-08-20
