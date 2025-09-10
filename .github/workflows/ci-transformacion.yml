@@ -66,7 +66,15 @@ jobs:
           cd transformacion/dbt
           python setup_duckdb_for_unit_tests.py
 
-      # 6) Ejecuta snapshots de dbt
+      # 6) Ejecuta modelos staging de dbt
+      - name: Run dbt staging models
+        run: |
+          cd transformacion/dbt
+          export BUCKET_STAGING="dummy"
+          export BUCKET_ANALYTICS="dummy"
+          dbt run --select staging --empty --target unit_test
+
+      # 7) Ejecuta snapshots de dbt
       - name: Run dbt snapshots
         run: |
           cd transformacion/dbt
@@ -74,15 +82,15 @@ jobs:
           export BUCKET_ANALYTICS="dummy"
           dbt snapshot --empty --target unit_test
 
-      # 7) Ejecuta modelos de dbt
-      - name: Run dbt models
+      # 8) Ejecuta modelos marts de dbt
+      - name: Run dbt marts models
         run: |
           cd transformacion/dbt
           export BUCKET_STAGING="dummy"
           export BUCKET_ANALYTICS="dummy"
-          dbt run --empty --target unit_test
+          dbt run --select marts --empty --target unit_test
 
-      # 8) Ejecuta unit tests
+      # 9) Ejecuta unit tests
       - name: Run unit tests
         run: |
           cd transformacion/dbt
