@@ -1,2 +1,2 @@
 psycopg2-binary==2.9.10
-dlt[duckdb,sql-database,athena]
+dlt[duckdb,sql_database,athena]==1.12.1
