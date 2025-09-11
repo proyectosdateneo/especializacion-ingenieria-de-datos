@@ -1,0 +1,119 @@
+# .github/workflows/cd-ingesta.yml
+name: CD Ingesta (build & push only)
+
+on:
+  push:
+    branches: [main]                  # CD solo al mergear a main
+    paths:
+      - "ingesta/**"
+      - "ingesta/Dockerfile"
+      - ".github/workflows/cd-ingesta.yml"
+  # Permite ejecutarlo manualmente desde cualquier rama (UI de Actions te deja elegir la ref)
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag opcional para la imagen (default = commit SHA)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-ingesta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION:     ${{ secrets.AWS_REGION }}
+      ECR_REGISTRY:   ${{ secrets.ECR_REGISTRY }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      IMAGE_TAG:      ${{ github.sha }}   # valor por defecto, se puede sobrescribir si viene input
+
+    steps:
+      # 1) traer el código
+      - uses: actions/checkout@v4
+
+      # 1.1) Resolver tag de imagen desde input manual o usar SHA por defecto
+      - name: Resolve image tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "Usando tag manual: ${{ github.event.inputs.image_tag }}"
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_ENV
+          else
+            echo "Usando tag por SHA: ${{ github.sha }}"
+            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      # 2) configurar credenciales AWS (solo ECR en este flujo)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/datavision-github-ecr-role
+          role-session-name: sesion-cd-ingesta
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 3) login en ECR
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 4) buildx para cache y multiplataforma (si hiciera falta)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 5) construir y subir imagen *inmutable* (solo por SHA)
+      - name: Build & Push Docker image (immutable tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./ingesta/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to:   type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max
+
+      # =========================
+      # STEPS "DUMMY" REFERENCIA
+      # =========================
+      # los siguientes pasos están *deshabilitados* (if: false). sirven para explicar
+      # cómo sería un CD completo en producción. podés mostrarlos en clase.
+
+      # 6) (dummy) renderizar Task Definition con la NUEVA imagen
+      - name: (dummy) Render ECS task definition with new image
+        if: false  # educativo: no se ejecuta
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: path/to/base-task-def.json         # o desde repo TF
+          container-name: ingesta                            # nombre del contenedor en la TD
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      # 7) (dummy) registrar nueva revisión de la Task Definition
+      - name: (dummy) Register new ECS task definition revision
+        if: false  # educativo
+        run: |
+          aws ecs register-task-definition \
+            --cli-input-json file://rendered-task-def.json
+
+      # 8) (dummy) actualizar un Service de ECS para tomar la nueva TD
+      - name: (dummy) Force new deployment on ECS service
+        if: false  # educativo
+        run: |
+          aws ecs update-service \
+            --cluster datavision-ingesta-cluster \
+            --service datavision-ingesta-service \
+            --force-new-deployment
+
+      # 9) (dummy) disparar un run de validación (canary) y esperar OK
+      - name: (dummy) Trigger a canary run via Airflow/ECS
+        if: false  # educativo
+        run: |
+          echo "aquí llamarías a un DAG de airflow o ecs run-task para validar la nueva imagen"
+
+      # 10) (dummy) rollback automático si falla el canary
+      - name: (dummy) Rollback strategy
+        if: false  # educativo
+        run: |
+          echo "si el canary falla, revertís a la revisión previa de la Task Definition"

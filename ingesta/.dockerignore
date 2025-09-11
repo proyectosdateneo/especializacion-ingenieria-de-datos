@@ -1,0 +1,35 @@
+.git/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and data artifacts
+logs/
+*.log
+*.duckdb
+*.db
+*.sqlite
+
+# dlt local state (regenerable at runtime)
+.dlt/
+
+# Python virtual envs
+.venv/
+venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build caches
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+
+# dbt / airflow (if present)
+transformacion/dbt/logs/
+orquestacion/.airflowignore
+.airflow/
