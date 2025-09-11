@@ -1,23 +1,32 @@
+# Dockerfile (ingesta/Dockerfile)
+# Construye la imagen colocando el código en /app/ingesta para que coincida con entry_point.sh
+
 FROM python:3.13-slim
 
-WORKDIR /app
+# el entrypoint espera /app/ingesta
+WORKDIR /app/ingesta
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
+# deps de sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-# Instalar dependencias de Python usando el requirements de ingesta
-COPY ingesta/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# con context: ./ingesta, este requirements.txt existe en la raíz del contexto
+COPY requirements.txt .
 
-# Copiar todo el repositorio dentro de la imagen
-COPY . /app
+# instalar dependencias de Python
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el script de entry point a /app y dar permisos de ejecución
-COPY ingesta/entry_point.sh /app/entry_point.sh
-RUN chmod +x /app/entry_point.sh
+# copiar el resto del código de ingesta al WORKDIR (/app/ingesta)
+COPY . .
 
-# Comando por defecto
-ENTRYPOINT ["/app/entry_point.sh"]
+# asegurar permisos del entrypoint (vive en /app/ingesta)
+RUN chmod +x /app/ingesta/entry_point.sh
+
+# por seguridad, no correr como root
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+# el entrypoint delega a "$@" (comando definido en la Task Definition/overrides)
+ENTRYPOINT ["/app/ingesta/entry_point.sh"]
