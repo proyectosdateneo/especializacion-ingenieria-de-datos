@@ -65,16 +65,36 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # 5) construir y subir imagen *inmutable* (solo por SHA)
+      # Paso: Build & Push de la imagen de ingesta
       - name: Build & Push Docker image (immutable tag)
         uses: docker/build-push-action@v6
         with:
-          context: .
+          # Contexto: solo la carpeta de ingesta.
+          # Antes estaba en ".", lo que incluía todo el repo innecesariamente → capas más pesadas.
+          context: ./ingesta
+
+          # Dockerfile: ruta explícita dentro del módulo de ingesta
           file: ./ingesta/Dockerfile
+
+          # Subimos la imagen al registry de ECR
           push: true
-          tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache
-          cache-to:   type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max
+
+          # Tag único e inmutable para esta build → commit SHA
+          # Esto permite reproducir la imagen exacta que se usó.
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+          # --- Opciones que sacamos ---
+          # cache-from / cache-to → los removemos para no crear el tag "buildcache"
+          #   - Antes: permitían reusar capas y acelerar builds futuros.
+          #   - Ahora: preferimos builds limpias para que en ECR quede solo la imagen final.
+          #
+          # provenance / sbom → deshabilitados para no generar artefactos extra (~20 KB)
+          #   - "provenance": metadatos de cadena de suministro (quién construyó, cuándo, con qué).
+          #   - "sbom": Software Bill of Materials, inventario de dependencias.
+          #   - En producción podrían ser útiles, pero para el curso solo queremos la imagen final.
+          provenance: false
+          sbom: false
+
 
       # =========================
       # STEPS "DUMMY" REFERENCIA
