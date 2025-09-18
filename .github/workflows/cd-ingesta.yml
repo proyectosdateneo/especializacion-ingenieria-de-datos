@@ -70,7 +70,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           # Contexto: solo la carpeta de ingesta.
-          # Antes estaba en ".", lo que incluía todo el repo innecesariamente → capas más pesadas.
           context: ./ingesta
 
           # Dockerfile: ruta explícita dentro del módulo de ingesta
@@ -80,7 +79,6 @@ jobs:
           push: true
 
           # Tag único e inmutable para esta build → commit SHA
-          # Esto permite reproducir la imagen exacta que se usó.
           tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
           # --- Opciones que sacamos ---
@@ -91,7 +89,6 @@ jobs:
           # provenance / sbom → deshabilitados para no generar artefactos extra (~20 KB)
           #   - "provenance": metadatos de cadena de suministro (quién construyó, cuándo, con qué).
           #   - "sbom": Software Bill of Materials, inventario de dependencias.
-          #   - En producción podrían ser útiles, pero para el curso solo queremos la imagen final.
           provenance: false
           sbom: false
 
@@ -100,11 +97,10 @@ jobs:
       # STEPS "DUMMY" REFERENCIA
       # =========================
       # los siguientes pasos están *deshabilitados* (if: false). sirven para explicar
-      # cómo sería un CD completo en producción. podés mostrarlos en clase.
 
       # 6) (dummy) renderizar Task Definition con la NUEVA imagen
       - name: (dummy) Render ECS task definition with new image
-        if: false  # educativo: no se ejecuta
+        if: false  # demostrativo: no se ejecuta
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: path/to/base-task-def.json         # o desde repo TF
@@ -113,14 +109,14 @@ jobs:
 
       # 7) (dummy) registrar nueva revisión de la Task Definition
       - name: (dummy) Register new ECS task definition revision
-        if: false  # educativo
+        if: false  # demostrativo
         run: |
           aws ecs register-task-definition \
             --cli-input-json file://rendered-task-def.json
 
       # 8) (dummy) actualizar un Service de ECS para tomar la nueva TD
       - name: (dummy) Force new deployment on ECS service
-        if: false  # educativo
+        if: false  # demostrativo
         run: |
           aws ecs update-service \
             --cluster datavision-ingesta-cluster \
@@ -129,12 +125,12 @@ jobs:
 
       # 9) (dummy) disparar un run de validación (canary) y esperar OK
       - name: (dummy) Trigger a canary run via Airflow/ECS
-        if: false  # educativo
+        if: false  # demostrativo
         run: |
           echo "aquí llamarías a un DAG de airflow o ecs run-task para validar la nueva imagen"
 
       # 10) (dummy) rollback automático si falla el canary
       - name: (dummy) Rollback strategy
-        if: false  # educativo
+        if: false  # demostrativo
         run: |
           echo "si el canary falla, revertís a la revisión previa de la Task Definition"
