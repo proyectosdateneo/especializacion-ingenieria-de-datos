@@ -1,0 +1,108 @@
+# Nombre visible del workflow en la pestaña Actions
+name: CI Ingesta
+
+on:
+  pull_request:
+    # Se ejecuta solo cuando cambian archivos de ingesta o el propio workflow
+    paths:
+      - "ingesta/**"
+      - ".github/workflows/ci-ingesta.yml"
+  # Bloque opcional como red de seguridad si alguien pushea directo a main.
+  # Si querés solo PR, podés eliminar este bloque "push".
+  push:
+    branches: [main]
+    paths:
+      - "ingesta/**"
+
+# Restringe el token automático de GitHub Actions a solo lectura (más seguro)
+permissions:
+  contents: read
+
+# Evita ejecuciones superpuestas del mismo PR/rama: cancela la anterior y corre la última
+concurrency:
+  group: ci-ingesta-${{ github.ref }}   # agrupa por rama/PR
+  cancel-in-progress: true              # cancela ejecuciones previas en curso
+
+jobs:
+  lint-and-smoke:
+    runs-on: ubuntu-latest  # runner hospedado por GitHub
+    steps:
+      # 1) Descarga el repo (el código del PR)
+      - uses: actions/checkout@v4
+
+      # 2) Prepara Python con cache de pip basado en requirements.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: ingesta/requirements.txt
+
+      # 3) Instala dependencias del módulo de ingesta + ruff (linter)
+      - name: Install deps
+        run: |
+          pip install -r ingesta/requirements.txt
+          pip install ruff==0.12.12  # fijamos versión para evitar cambios de reglas inesperados
+
+      # 4) Lint de Python sobre el directorio de ingesta
+      - name: Ruff lint
+        run: ruff check ingesta
+
+      # 5) Chequeo de sintaxis en TODO el árbol de ingesta sin ejecutar el código
+      #    python -m compileall falla si encuentra un archivo con error de sintaxis.
+      - name: Syntax check (compileall)
+        run: python -m compileall -q ingesta
+
+      # 6) Smoke import estricto: intenta importar módulos clave.
+      #    - Si falta un archivo "requerido", falla el job.
+      #    - Si la importación de un archivo existente falla (imports rotos, side effects), también falla.
+      - name: Smoke import (estricto)
+        run: |
+          python - <<'PY'
+          import importlib.util, sys, pathlib, traceback
+
+          base = pathlib.Path("ingesta")
+
+          # Archivos que consideramos OBLIGATORIOS para este módulo.
+          required = ["ingesta_datavision.py", "calidad_de_datos.py"]
+
+          # Archivos OPCIONALES: si existen, los importamos para detectar errores;
+          # si no existen, no fallamos.
+          optional = ["ingesta_ejemplo.py"]
+
+          # Verificación de existencia de obligatorios
+          missing = [f for f in required if not (base / f).exists()]
+          if missing:
+              print("Faltan archivos requeridos:", missing)
+              sys.exit(1)
+
+          failed = []
+
+          # Intentamos importar los obligatorios
+          for fname in required:
+              p = base / fname
+              try:
+                  spec = importlib.util.spec_from_file_location(p.stem, p)
+                  m = importlib.util.module_from_spec(spec)
+                  spec.loader.exec_module(m)  # OJO: si el módulo tiene side effects al importar, se ejecutan
+                  print(f"OK import {p}")
+              except Exception:
+                  failed.append(p.as_posix())
+                  traceback.print_exc()
+
+          # Intentamos importar los opcionales (solo si existen)
+          for fname in optional:
+              p = base / fname
+              if p.exists():
+                  try:
+                      spec = importlib.util.spec_from_file_location(p.stem, p)
+                      m = importlib.util.module_from_spec(spec)
+                      spec.loader.exec_module(m)
+                      print(f"OK import (opcional) {p}")
+                  except Exception:
+                      failed.append(p.as_posix())
+                      traceback.print_exc()
+
+          if failed:
+              print("Imports fallidos:", failed)
+              sys.exit(1)
+          PY
