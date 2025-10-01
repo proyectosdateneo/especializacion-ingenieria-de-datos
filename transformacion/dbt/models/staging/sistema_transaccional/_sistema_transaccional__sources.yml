@@ -9,6 +9,7 @@ sources:
     schema: |
       {%- if target.name == "dev" -%} raw_datavision_dev
       {%- elif target.name == "prod" -%} raw_datavision_prod
+      {%- elif target.name == "unit_test" -%} unit_test
       {%- else -%} invalid_schema
       {%- endif -%}
     tables:

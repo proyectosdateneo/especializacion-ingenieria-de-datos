@@ -202,3 +202,5 @@ ingesta/schemas/import/sql_database.schema.yaml
 profiles.yml
 .user.yml
 *.zip
+
+practica*/

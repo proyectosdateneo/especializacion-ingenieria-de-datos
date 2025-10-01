@@ -1,0 +1,43 @@
+unit_tests:
+  - name: test_fact_rfm_segmentation
+    model: fact_rfm
+    config:
+      vars:
+        fecha_rfm: '2024-01-01'
+    given:
+      - input: ref('dim_cuentas_base')
+        format: sql
+        rows: |
+          select 1 as id_dim_cuenta, 1 as id_cuenta, 'Cliente Campeón' as nombre_cuenta, 'cliente1@example.com' as correo_electronico, '2023-01-15' as fecha_creacion, '2023-01-15' as fecha_actualizacion, '2023-01-15' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 2 as id_dim_cuenta, 2 as id_cuenta, 'Cliente Leal' as nombre_cuenta, 'cliente2@example.com' as correo_electronico, '2023-02-20' as fecha_creacion, '2023-02-20' as fecha_actualizacion, '2023-02-20' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 3 as id_dim_cuenta, 3 as id_cuenta, 'Cliente Alto Valor' as nombre_cuenta, 'cliente3@example.com' as correo_electronico, '2023-03-10' as fecha_creacion, '2023-03-10' as fecha_actualizacion, '2023-03-10' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 4 as id_dim_cuenta, 4 as id_cuenta, 'Cliente Potencial' as nombre_cuenta, 'cliente4@example.com' as correo_electronico, '2023-04-05' as fecha_creacion, '2023-04-05' as fecha_actualizacion, '2023-04-05' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 5 as id_dim_cuenta, 5 as id_cuenta, 'Cliente Nuevo' as nombre_cuenta, 'cliente5@example.com' as correo_electronico, '2023-11-01' as fecha_creacion, '2023-11-01' as fecha_actualizacion, '2023-11-01' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 6 as id_dim_cuenta, 6 as id_cuenta, 'Cliente Necesita Atención' as nombre_cuenta, 'cliente6@example.com' as correo_electronico, '2023-01-30' as fecha_creacion, '2023-01-30' as fecha_actualizacion, '2023-01-30' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 7 as id_dim_cuenta, 7 as id_cuenta, 'Cliente En Riesgo' as nombre_cuenta, 'cliente7@example.com' as correo_electronico, '2023-02-15' as fecha_creacion, '2023-02-15' as fecha_actualizacion, '2023-02-15' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 8 as id_dim_cuenta, 8 as id_cuenta, 'Cliente No Perder' as nombre_cuenta, 'cliente8@example.com' as correo_electronico, '2023-01-10' as fecha_creacion, '2023-01-10' as fecha_actualizacion, '2023-01-10' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 9 as id_dim_cuenta, 9 as id_cuenta, 'Cliente Dormido' as nombre_cuenta, 'cliente9@example.com' as correo_electronico, '2023-01-05' as fecha_creacion, '2023-01-05' as fecha_actualizacion, '2023-01-05' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 10 as id_dim_cuenta, 10 as id_cuenta, 'Cliente Perdido' as nombre_cuenta, 'cliente10@example.com' as correo_electronico, '2023-01-01' as fecha_creacion, '2023-01-01' as fecha_actualizacion, '2023-01-01' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 11 as id_dim_cuenta, 11 as id_cuenta, 'Cliente Regular' as nombre_cuenta, 'cliente11@example.com' as correo_electronico, '2023-05-15' as fecha_creacion, '2023-05-15' as fecha_actualizacion, '2023-05-15' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+          union all select 12 as id_dim_cuenta, 12 as id_cuenta, 'Cliente Regular 2' as nombre_cuenta, 'cliente12@example.com' as correo_electronico, '2023-06-20' as fecha_creacion, '2023-06-20' as fecha_actualizacion, '2023-06-20' as valido_desde, '9999-12-31' as valido_hasta, true as es_actual
+      - input: ref('fact_suscripciones_cuentas')
+        format: csv
+        fixture: fact_suscripciones_cuentas_fixture
+      - input: ref('dim_suscripciones')
+        format: csv
+        fixture: dim_suscripciones_fixture
+      - input: ref('stg_contents')
+        format: csv
+        fixture: stg_contents_fixture
+      - input: ref('stg_subscription_payments')
+        format: csv
+        fixture: stg_subscription_payments_fixture
+      - input: ref('stg_accounts_subscription')
+        format: csv
+        fixture: stg_accounts_subscription_fixture
+      - input: ref('stg_account_premium_features')
+        format: csv
+        fixture: stg_account_premium_features_fixture
+    expect:
+      format: csv
+      fixture: fact_rfm_expected_fixture

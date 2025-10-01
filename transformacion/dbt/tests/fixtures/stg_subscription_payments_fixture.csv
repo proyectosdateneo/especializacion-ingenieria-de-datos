@@ -1,0 +1,37 @@
+id_pago,id_suscripcion_cuenta,fecha_pago,monto,metodo_pago,ciclo_facturacion
+1,1,2023-12-01,99.99,Tarjeta de Crédito,Mensual
+2,1,2023-11-01,99.99,Tarjeta de Crédito,Mensual
+3,1,2023-10-01,99.99,Tarjeta de Crédito,Mensual
+4,1,2023-09-01,99.99,Tarjeta de Crédito,Mensual
+5,1,2023-08-01,99.99,Tarjeta de Crédito,Mensual
+6,1,2023-07-01,99.99,Tarjeta de Crédito,Mensual
+7,2,2023-12-01,59.99,PayPal,Mensual
+8,2,2023-11-01,59.99,PayPal,Mensual
+9,2,2023-10-01,59.99,PayPal,Mensual
+10,2,2023-09-01,59.99,PayPal,Mensual
+11,3,2023-12-01,99.99,Tarjeta de Crédito,Mensual
+12,3,2023-11-01,99.99,Tarjeta de Crédito,Mensual
+13,3,2023-10-01,99.99,Tarjeta de Crédito,Mensual
+14,4,2023-12-01,29.99,Transferencia Bancaria,Mensual
+15,4,2023-11-01,29.99,Transferencia Bancaria,Mensual
+16,5,2023-12-01,59.99,PayPal,Mensual
+17,6,2023-12-01,99.99,Tarjeta de Crédito,Mensual
+18,6,2023-11-01,99.99,Tarjeta de Crédito,Mensual
+19,6,2023-10-01,99.99,Tarjeta de Crédito,Mensual
+20,6,2023-09-01,99.99,Tarjeta de Crédito,Mensual
+21,6,2023-08-01,99.99,Tarjeta de Crédito,Mensual
+22,6,2023-07-01,99.99,Tarjeta de Crédito,Mensual
+23,7,2023-12-01,59.99,PayPal,Mensual
+24,7,2023-11-01,59.99,PayPal,Mensual
+25,7,2023-10-01,59.99,PayPal,Mensual
+26,8,2023-12-01,99.99,Tarjeta de Crédito,Mensual
+27,8,2023-11-01,99.99,Tarjeta de Crédito,Mensual
+28,8,2023-10-01,99.99,Tarjeta de Crédito,Mensual
+29,8,2023-09-01,99.99,Tarjeta de Crédito,Mensual
+30,8,2023-08-01,99.99,Tarjeta de Crédito,Mensual
+31,8,2023-07-01,99.99,Tarjeta de Crédito,Mensual
+32,9,2023-12-01,29.99,Transferencia Bancaria,Mensual
+33,10,2023-12-01,29.99,Transferencia Bancaria,Mensual
+34,11,2023-12-01,59.99,PayPal,Mensual
+35,11,2023-11-01,59.99,PayPal,Mensual
+36,12,2023-12-01,29.99,Transferencia Bancaria,Mensual

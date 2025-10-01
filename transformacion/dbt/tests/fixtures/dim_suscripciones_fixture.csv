@@ -1,0 +1,4 @@
+id_dim_suscripcion,id_suscripcion,nombre_suscripcion,max_contenidos_mensuales,fecha_creacion,fecha_actualizacion,valido_desde,valido_hasta,es_actual
+1,1,Basica,10,2023-01-01,2023-01-01,2023-01-01,9999-12-31,true
+2,2,Premium,50,2023-01-01,2023-01-01,2023-01-01,9999-12-31,true
+3,3,Enterprise,999,2023-01-01,2023-01-01,2023-01-01,9999-12-31,true
