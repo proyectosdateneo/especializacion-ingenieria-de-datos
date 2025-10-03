@@ -12,9 +12,9 @@ Archivo de configuración que define la conexión a la base de datos Athena.
 ### `checks.yml`
 Archivo que contiene los tests de calidad de datos escritos en SodaCL. Incluye ejemplos de diferentes tipos de validaciones que replican funcionalidad equivalente a dbt:
 
-- **Tests de integridad**: not_null, unique, referential integrity
-- **Tests de validación**: formatos, rangos, valores válidos
-- **Tests de calidad**: freshness, cross-checks entre tablas
+- **Tests de integridad**: not_null, unique, referential integrity.
+- **Tests de validación**: formatos, rangos, valores válidos.
+- **Tests de calidad**: freshness, cross-checks entre tablas.
 
 ### `requirements.txt`
 Dependencias de Python necesarias para ejecutar Soda Core.
@@ -35,21 +35,21 @@ Para ejecutar todos los checks definidos en el archivo:
 soda scan -d staging_dev -c configuration.yml checks.yml
 ```
 
-## Tipos de Tests Implementados
+## Tipos de tests implementados
 
-### Tests de Integridad de Datos
-- **Not Null**: Verifica que campos críticos no sean nulos
-- **Unique**: Valida que claves primarias sean únicas
-- **Referential Integrity**: Verifica integridad referencial entre tablas
+### Tests de integridad de datos
+- **Not Null**: verifica que campos críticos no sean nulos.
+- **Unique**: valida que claves primarias sean únicas.
+- **Referential Integrity**: verifica integridad referencial entre tablas.
 
-### Tests de Validación de Negocio
-- **Format Validation**: Valida formatos de email, fechas, etc.
-- **Value Ranges**: Verifica que valores numéricos estén en rangos válidos
-- **Accepted Values**: Valida que campos categóricos tengan valores permitidos
+### Tests de validación de negocio
+- **Format Validation**: valida formatos de email, fechas, etc.
+- **Value Ranges**: verifica que valores numéricos estén en rangos válidos.
+- **Accepted Values**: valida que campos categóricos tengan valores permitidos.
 
-### Tests de Calidad de Datos
-- **Freshness**: Verifica que los datos se actualicen regularmente
-- **Cross-checks**: Compara conteos entre tablas de staging y raw
+### Tests de calidad de datos
+- **Freshness**: verifica que los datos se actualicen regularmente.
+- **Cross-checks**: compara conteos entre tablas de staging y raw.
 
 ## Equivalencia con dbt
 
@@ -63,13 +63,13 @@ Los tests implementados en SodaCL replican funcionalidad equivalente a los tests
 | `invalid_count(campo) = 0` con `valid values` | `accepted_values: {values: [...]}` |
 | `freshness(campo) < 1d` | `dbt_utils.expression_is_true` con interval |
 
-## Integración al Pipeline
+## Integración al pipeline
 
 Al igual que se hizo con **dltHub** y **dbt**, Soda Core se puede dockerizar e incorporar al pipeline de datos para ejecutar tests de calidad de forma automatizada. Esto permitiría:
 
-- Ejecutar tests de calidad como parte del pipeline de CI/CD
-- Integrar validaciones de datos en el flujo de orquestación
-- Generar alertas automáticas cuando se detecten problemas de calidad
-- Mantener un historial de métricas de calidad de datos
+- Ejecutar tests de calidad como parte del pipeline de CI/CD.
+- Integrar validaciones de datos en el flujo de orquestación.
+- Generar alertas automáticas cuando se detecten problemas de calidad.
+- Mantener un historial de métricas de calidad de datos.
 
 La dockerización de Soda Core seguiría un patrón similar al implementado para otras herramientas del proyecto, permitiendo su integración seamless en el ecosistema de datos.
