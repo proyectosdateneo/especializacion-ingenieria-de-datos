@@ -1,0 +1,33 @@
+# Ejemplo de configuración de perfiles para dbt
+# Copia este archivo como profiles.yml y ajusta los valores según tu entorno
+
+datavision:
+  target: dev  # Entorno por defecto (dev, prod, unit_test)
+  outputs:
+    dev:
+      type: athena
+      s3_staging_dir: s3://tu-bucket-temp/dbt/  # Bucket para archivos temporales de Athena
+      s3_data_naming: schema_table
+      s3_tmp_table_dir: s3://tu-bucket-temp/temp/  # Directorio para tablas temporales
+      region_name: us-west-2  # Región de AWS
+      schema: dbt
+      database: awsdatacatalog
+      threads: 4
+      aws_profile_name: tu_perfil_aws  # Perfil de AWS CLI
+    
+    prod:
+      type: athena
+      s3_staging_dir: s3://tu-bucket-temp-prod/dbt/
+      s3_data_naming: schema_table
+      s3_tmp_table_dir: s3://tu-bucket-temp-prod/temp/
+      region_name: us-west-2
+      schema: dbt
+      database: awsdatacatalog
+      threads: 8  # Más threads para producción
+      aws_profile_name: tu_perfil_aws_prod
+    
+    unit_test:
+      type: duckdb
+      path: 'unit_test.duckdb'
+      schema: unit_test
+      threads: 1
